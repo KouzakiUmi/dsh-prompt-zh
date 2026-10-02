@@ -1,0 +1,38 @@
+{
+  "name": "dsh-prompt-zh",
+  "version": "1.1.0",
+  "private": true,
+  "displayName": "系统提示词中文化",
+  "description": "把 DSH 内置的系统提示词段落与 context 本地化为简体中文（注入点 system-prompt/assemble）。工具的 description 与参数 schema 有意保持英文。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "i18n",
+    "localization",
+    "chinese",
+    "prompt"
+  ],
+  "license": "MIT",
+  "icon": "./icon.svg",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json",
+    "./locale/*": "./locale/*"
+  },
+  "files": [
+    "lib",
+    "locale",
+    "icon.svg",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

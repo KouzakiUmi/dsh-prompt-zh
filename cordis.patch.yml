@@ -1,0 +1,10 @@
+# Host patch layer for this bundle. `insert` without a top-level `id` appends
+# new Loader entries; a profile's own patch may later target the `prompt-zh` row
+# to override its config.
+#
+# `name` is the bare package name, so the route keeps a real plugin identity
+# (readPluginMeta needs barePackageName) and resolves through node_modules —
+# no absolute file:// path and no hand-maintained ?rev= cache key.
+- insert:
+    - id: prompt-zh
+      name: dsh-prompt-zh
