@@ -1,7 +1,6 @@
 {
   "name": "dsh-prompt-zh",
   "version": "1.1.0",
-  "private": true,
   "displayName": "系统提示词中文化",
   "description": "把 DSH 内置的系统提示词段落与 context 本地化为简体中文（注入点 system-prompt/assemble）。工具的 description 与参数 schema 有意保持英文。",
   "keywords": [
@@ -34,5 +33,13 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KouzakiUmi/dsh-prompt-zh.git"
+  },
+  "homepage": "https://github.com/KouzakiUmi/dsh-prompt-zh#readme",
+  "bugs": {
+    "url": "https://github.com/KouzakiUmi/dsh-prompt-zh/issues"
   }
 }
