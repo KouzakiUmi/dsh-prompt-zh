@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "System Prompt Localization (zh-CN)",
-    "description": "Replaces DSH's built-in system prompt sections and contexts with Simplified Chinese through system-prompt/assemble. Tool descriptions and parameter schemas intentionally stay English."
+    "description": "Replaces DSH built-in system prompt sections, MCP server instructions, and plugin-injected prompts with Simplified Chinese. Tool descriptions and parameter schemas intentionally stay in English."
   }
 }

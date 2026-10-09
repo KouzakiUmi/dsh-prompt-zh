@@ -1,16 +1,29 @@
 # dsh-prompt-zh — DSH 系统提示词中文化
 
-把 DSH 内置的**系统提示词**替换为简体中文。**纯 Host 插件，无 UI。**
+把 DSH 内置的**系统提示词**、**MCP 指导说明**以及**各插件动态注入的提示词片段**替换为简体中文。**纯 Host 插件，无 UI。**
 
 ## 它接管什么
 
-| 目标 | 注入点 |
-|---|---|
-| 提示词正文段落与 context | `system-prompt/assemble` |
+| 目标 | 注入点 | 说明 |
+|---|---|---|
+| 提示词正文段落与 context | `system-prompt/assemble` | 逐段翻译 `sections`、翻译 `contexts`，并按可见工具集裁剪与重排（`filePolicy` / `networkPolicy` / `delegationPolicy`） |
+| MCP 服务器系统指令 | `system-prompt/assemble` | 逐项接管 `mcp:<server>`（如 `context7`、`github`、`playwright`、`chrome-devtools` 等）的规则与指导说明 |
+| 运行时动态注入提示词片段 | `llm/stream` | 拦截模型输入流，实时将各插件动态注入的消息级提示词翻译为简体中文 |
 
-**只有这一个注入点。** 具体改写的对象是 `system-prompt/assemble` 回调里的
-`{ sections, contexts, tools }`：逐段翻译 `sections`、翻译 `contexts`、
-并按可见工具集裁剪与重排（`filePolicy` / `networkPolicy` / `delegationPolicy` 三段是重新生成的）。
+### 动态注入提示词覆盖范围（`llm/stream` 阶段）
+
+许多内置与三方插件会向消息流中注入 `<system-reminder>`、`<hindsight_*>` 或快照消息。插件在 `llm/stream` 处以幂等、低开销方式自动中文化这些片段：
+
+1. **运行时上下文快照头部**（`@deepseek-ai/dsh-system-prompt` / `@deepseek-ai/dsh-agent-loop`）：
+   `Current runtime context. This snapshot supersedes earlier runtime-context snapshots.` → `当前运行时上下文。此快照替代此前的运行时上下文快照。`
+2. **工作区指令**（`@deepseek-ai/dsh-agent-instructions`）：
+   AGENTS.md、CLAUDE.md 等工作区指令的引导语（`The following workspace instructions may be relevant...`）、基线替换声明与来源标记（`Instructions from: ...`）。
+3. **技能系统提示与更新**（`@deepseek-ai/dsh-tool-skill` / `@deepseek-ai/dsh-skill`）：
+   `<system-reminder>` 中的可用技能列表说明、技能目录更新提示（`The available skill catalog changed...`）、调用纪律与 `<skill_content>` 资源路径指引。
+4. **时间与时区采样**（`@deepseek-ai/dsh-time-context`）：
+   每轮每步注入的时间采样、浏览器时区与自前序上下文耗时（`Time sampled while preparing turn...`）。
+5. **Hindsight 记忆与知识库**（`@vectorize-io/hindsight-coding-agents`）：
+   知识库引导（`<hindsight_knowledge>`）、记忆检索说明（`<hindsight_memory>`）与刷新提醒（`<hindsight_knowledge_refresh>`），包括工具调用时机、纠错机制与归属声明。
 
 ## 判断模块：句子 ↔ 工具关联
 
@@ -41,55 +54,20 @@
 
 - 工具 schema 是模型调用工具的直接依据，改写它有实际的误配风险；
 - 工具集会随 agent、preset、PTC 模式变化，逐条维护字典的成本高而收益低；
-- 上游任何一个工具改描述，字典就落后一次，且**不会报错**（见下节）。
-
-> 曾经实现过一版经 `llm/stream` 就地改写 `GenerateOptions.tools[].description` 的方案
-> （`options.tools` 确实是模型实际收到的那份 `ToolSchema[]`，且 `tools.schemas()` 返回深拷贝、
-> 可安全就地改写），后按上述决定整体移除。`lib/index.js` 里留有一行注释标记此事，
-> 若将来需要恢复，从那里入手。
-
-## 两种"静默落后"的风险
-
-本插件用两种方式接管提示词，**两者在上游原文变化时都不会报错**：
-
-1. `TEXT` 字典是**整段无条件替换**（不比对英文原文）；
-2. `networkPolicy` / `filePolicy` / `delegationPolicy` 是**自行生成**的段落，同时
-   `translate()` 把对应原 section 置空（`return ''`）。
-
-⇒ **升级 DSH 后必须复查。** 复查方法：在
-`resources/app/node_modules/@deepseek-ai/` 下 grep 对应 section 名
-（如 `name: "tool:read"`、`name: "ui:deliverable-file-references"`、
-`FILE_REFERENCE_PROMPT`、以及 `dsh-base/cordis.patch.yml` 里的 plan-mode `section:`），
-再与 `lib/index.js` 的 `TEXT` / `PLAN_PARAGRAPHS` / `filePolicy` / `SENTENCE_TOOL_LINKS` **逐句**比对。
-
-2026-10-02 对照已安装 ASAR 做过一次全量覆盖面盘点（只读解析，未改包）：
-核心共注册 **24 个 prompt section**（`tool:*` 11、`tools:*` 2、`deployment:*` 2、
-`harness:identity`、`plan:policy`、`app:web-surface`、`team:policy`、
-`ui:deliverable-file-references`、`context:file-reference`）与 **4 个 context**
-（`approval:policy`、`sandbox:policy`、`subagent:delegation` + section 形式的
-`context:file-reference`），插件全部覆盖；`mcp:*` / `computer-use:*` /
-`working-activity:*` / `tool:structured_output` / `tool:grok_web_search` 等
-当前安装未注册，插件仅保留防御性处理。
-
-**注意两类漂移不同**：句子级遗漏只是少译一句；**段落级前缀失配**会让整段保持英文
-（2026-09-29 就修过一次 —— `PLAN_PARAGRAPHS[2]` 的前缀多了一个句点，
-`startsWith` 失败，plan mode 第 3 段一直是英文原文）。所以**必须实测，不能只看译文**。
+- 上游任何一个工具改描述，字典就落后一次，且**不会报错**。
 
 ## 离线自检
 
 `lib/index.js` 导出了纯函数，可脱离运行中的 DSH 验证：
 
 ```js
-import { translate, translateContext, networkPolicy, filePolicy, delegationPolicy } from 'dsh-prompt-zh'
+import { translate, translateContext, filePolicy, networkPolicy, delegationPolicy, translateMcp, translateInjectedText, translateMessages } from 'dsh-prompt-zh'
 ```
 
-`~\.dsh\prompt-zh-check.mjs` 就是这样一个脚本：把**真实英文原文**喂进去，
-断言中文输出含关键句、且二次翻译逐字节幂等。**升级后先跑它。**
-
-（脚本内嵌的英文原文取自核心 `0.2.0-rc.1` / 壳 `2.0.15-next`；上游再改时这些字面量要同步更新。）
+运行 `node check.mjs`：把真实英文原文喂进去，断言中文输出含关键句、句子关联完整命中且二次翻译逐字节幂等。**升级后先跑它。**
 
 ## 依赖
 
 - `systemPrompt`（必需，`export const inject`）
 
-无其他服务依赖，无文件系统写入，无网络访问。
+无其他外部服务依赖，无文件系统写入，无网络访问。
