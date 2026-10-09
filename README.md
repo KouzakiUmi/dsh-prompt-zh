@@ -42,6 +42,8 @@
    每轮每步注入的时间采样、浏览器时区与自前序上下文耗时（`Time sampled while preparing turn...`，支持 `model-visible message` 与 `step context`）。
 5. **Hindsight 记忆与知识库**（`@vectorize-io/hindsight-coding-agents`）：
    知识库引导（`<hindsight_knowledge>`）、记忆检索说明（`<hindsight_memory>`）与刷新提醒（`<hindsight_knowledge_refresh>`），包括工具调用时机、纠错机制与归属声明。
+6. **MCP 服务器系统指令与注入片段**（`@deepseek-ai/dsh-mcp-client`）：
+   支持作为独立 section（`system-prompt/assemble`）或动态组合提示词（`llm/stream`）全文识别并翻译 `context7`、`github`、`playwright`、`chrome-devtools` 等服务器的说明，宽容兼容缩进制表符、破折号和单双引号。对于任意自定义未知 MCP，统一将标题规范化为 `### MCP 服务器：<name>`。
 
 ## 多环境隔离与条件兼容机制
 

@@ -11,6 +11,7 @@ import {
   isSectionVisible,
   SENTENCE_TOOL_LINKS,
   translateMcp,
+  translateAllMcp,
   translateInjectedText,
   translateMessages
 } from './lib/index.js'
@@ -186,6 +187,26 @@ const idemHind = translateInjectedText(hindOut) === hindOut
 const idemHindRefresh = translateInjectedText(hindRefreshOut) === hindRefreshOut
 const idemMem = translateInjectedText(memOut) === memOut
 
+// ── translateInjectedText / translateAllMcp 包含 MCP 说明片段 ──────
+const INJECT_MCP_PROMPT_EN = `## MCP 资源服务器
+
+使用 list_mcp_resources、list_mcp_resource_templates 或 read_mcp_resource 时，将以下名称之一作为 server 参数：["chrome-devtools","context7","github","playwright"]。
+
+${MCP_CONTEXT7_EN}
+
+${MCP_GITHUB_EN}`
+
+const injectedMcpOut = translateInjectedText(INJECT_MCP_PROMPT_EN)
+check('injected:mcp-full', injectedMcpOut, [
+  '### MCP 服务器：context7',
+  '获取最新文档',
+  '### MCP 服务器：github',
+  'GitHub MCP 服务器提供与 GitHub 平台交互的工具',
+  'Issue 处理',
+  'Pull Request 处理'
+])
+const idemInjectedMcp = translateInjectedText(injectedMcpOut) === injectedMcpOut
+
 // ── translateMessages 结构与内容处理 ───────────────────────────────
 const sampleMessages = [
   { role: 'system', content: INJECT_INSTRUCTIONS_EN },
@@ -215,6 +236,7 @@ console.log(`  injected:time-step1             ${idemTimeStep1 ? 'PASS' : 'FAIL'
 console.log(`  injected:hindsight-knowledge    ${idemHind ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:hindsight-refresh      ${idemHindRefresh ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:hindsight-memory       ${idemMem ? 'PASS' : 'FAIL'}`)
+console.log(`  injected:mcp-full               ${idemInjectedMcp ? 'PASS' : 'FAIL'}`)
 
 console.log('\n=== plan:policy 实际输出 ===')
 console.log(planOut.split('\n\n').map((p, i) => `  [${i + 1}] ${p.slice(0, 90)}…`).join('\n'))
