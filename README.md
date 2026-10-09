@@ -28,6 +28,8 @@
 | MCP 服务器系统指令 | `system-prompt/assemble` | 逐项接管 `mcp:<server>`（如 `context7`、`github`、`playwright`、`chrome-devtools` 等）的规则与指导说明 |
 
 > **注意（v1.2.2 稳定性修复）**：DSH 核心（`@deepseek-ai/dsh-agent-loop`）对下发至 LLM 的请求体实施了严格的不可变保护（`Object.freeze`）。此前的 `llm/stream` 拦截试图就地修改 `options.messages` 会引发只读属性赋值异常；v1.2.2 遵循核心设计规范，纯净保留 `system-prompt/assemble` 组装点，彻底杜绝请求崩溃。
+>
+> **v1.2.3 健壮性修复**：① 按 name 整段替换的条目改为"输入特征匹配才替换"——上游措辞漂移时保守保留英文原文，不再套用可能过时的旧译文；② Hindsight 片段守卫改为大小写不敏感；③ `filePolicy` 在缺少 `read` 工具时不再指示模型"先读取"。
 
 ## 多环境隔离与条件兼容机制
 
@@ -60,7 +62,9 @@
 import { translate, translateContext, filePolicy, networkPolicy, delegationPolicy, translateMcp, translateInjectedText, translateMessages } from 'dsh-prompt-zh'
 ```
 
-运行 `node check.mjs`：把真实英文原文喂进去，断言中文输出含关键句、句子关联完整命中且二次翻译逐字节幂等。**升级后先跑它。**
+运行 `node check.mjs`（**仅源码克隆可用**——该文件不随 npm 包发布）：把真实英文原文喂进去，断言中文输出含关键句、句子关联完整命中且二次翻译逐字节幂等。**升级后先跑它。**
+
+npm 安装者可用上方 import 示例把导出的纯函数喂入自己的样本做离线验证；若某段英文原文与内置特征不匹配，插件会原样保留该段而不强行翻译。
 
 ## 依赖
 

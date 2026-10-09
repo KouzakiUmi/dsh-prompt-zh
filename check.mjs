@@ -246,8 +246,15 @@ console.log(filesOut.split('\n').map((l) => '  ' + l).join('\n'))
 
 // ── 句子关联覆盖：SENTENCE_TOOL_LINKS 的每个片段必须真实存在于对应译文里 ──
 const linkResults = []
+// 整段替换类 section 用真实英文样本驱动，覆盖的是「真实原文 → 译文」完整链路；
+// 无条件字典条目（ralph/team）用占位串即可拿到译文。
+const LINK_SAMPLES = {
+  'plan:policy': PLAN_EN,
+  'tool:jobs': JOBS_EN,
+  'ui:deliverable-file-references': DELIVERABLES_EN,
+}
 for (const [name, fragment] of SENTENCE_TOOL_LINKS) {
-  const sample = name === 'plan:policy' ? PLAN_EN : 'upstream sample text'
+  const sample = LINK_SAMPLES[name] ?? 'upstream sample text'
   const source = translate(name, sample)
   if (!source.includes(fragment)) linkResults.push({ label: `${name} ⇐ ${fragment.slice(0, 40)}…`, ok: false })
 }
@@ -291,8 +298,19 @@ gateCheck('gate 幂等（二次执行不变）', applySentenceGate('team:policy'
 gateCheck('networkPolicy: 无联网工具且无外部 section → 空串', networkPolicy(new Set(), []) === '')
 gateCheck('networkPolicy: 仅 x_search → 不提 web_search/grok_web_search 备选', !networkPolicy(new Set(['x_search']), []).includes('web_search'))
 gateCheck('networkPolicy: x_search + web_search → 附备选警告', networkPolicy(new Set(['x_search', 'web_search']), []).includes('不要改用 `web_search`'))
-gateCheck('filePolicy: 仅 write → 不提 edit', !filePolicy(new Set(['write'])).includes('`edit`'))
+gateCheck('filePolicy: 仅 write → 不提 edit/read', !filePolicy(new Set(['write'])).includes('`edit`') && !filePolicy(new Set(['write'])).includes('读取'))
+gateCheck('filePolicy: 仅 edit → 含 edit 指引、不提读取', filePolicy(new Set(['edit'])) === '局部修改优先 `edit`。')
 gateCheck('filePolicy: 全工具 → 含 read/edit 指引', filePolicy(new Set(['read', 'write', 'edit', 'glob', 'grep'])).includes('局部修改优先 `edit`'))
+
+// 保守守卫：整段替换条目的输入特征不匹配时，宁可保留英文原文也不套用旧译文。
+gateCheck('保守守卫: jobs 输入漂移 → 保留原文', translate('tool:jobs', 'Some unrelated upstream paragraph.') === 'Some unrelated upstream paragraph.')
+gateCheck('保守守卫: deliverables 输入漂移 → 保留原文', translate('ui:deliverable-file-references', 'Other guidance entirely.') === 'Other guidance entirely.')
+gateCheck('保守守卫: identity 输入漂移 → 保留原文', translate('harness:identity', 'You are a generic assistant.') === 'You are a generic assistant.')
+gateCheck('保守守卫: file-reference 输入漂移 → 保留原文', translateContext('context:file-reference', 'Other context entirely.') === 'Other context entirely.')
+// 守卫大小写不敏感：仅含大写 Hindsight（无小写标签）的已知规则仍须翻译。
+const CAPITAL_ONLY_HIND = `ALSO your correction tool: when you verify a Hindsight memory is wrong or stale, ingest a "Correction: <topic>" doc stating what memory claimed, what is true now, and the evidence — newer facts supersede older ones.`
+gateCheck('Hindsight 守卫: 仅大写 Hindsight 的已知规则也翻译', translateInjectedText(CAPITAL_ONLY_HIND).includes('它也是你的纠错工具'))
+
 gateCheck('section 可见性: tool:jobs any 模式', isSectionVisible('tool:jobs', new Set(['job_output'])) && !isSectionVisible('tool:jobs', new Set()))
 gateCheck('section 可见性: team:policy any 模式', isSectionVisible('team:policy', new Set(['wait_agent'])) && !isSectionVisible('team:policy', new Set()))
 gateCheck('section 可见性: tool:bash all 模式', isSectionVisible('tool:bash', new Set(['bash'])) && !isSectionVisible('tool:bash', new Set()))
