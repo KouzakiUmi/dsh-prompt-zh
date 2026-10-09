@@ -1,6 +1,9 @@
-# 版本化发布：只有推 v* tag 才会出 Release。
-# 安装方式（无需 npm registry）：
-#   dsh plugin --profile desktop add https://github.com/KouzakiUmi/dsh-prompt-zh/releases/download/v<version>/dsh-prompt-zh.tgz
+# 版本化发布：推 v* tag 自动触发验证、构建 Release 资产、发布 GitHub Release 并通过 Trusted Publisher 自动发布至 npm。
+# 安装方式：
+#   方式 1（推荐，从 npm 安装）：
+#     dsh plugin --profile desktop add dsh-prompt-zh
+#   方式 2（从 GitHub Release 安装）：
+#     dsh plugin --profile desktop add https://github.com/KouzakiUmi/dsh-prompt-zh/releases/download/v<version>/dsh-prompt-zh.tgz
 name: Release
 
 on:
@@ -43,6 +46,9 @@ jobs:
       - name: Manifest and syntax checks
         run: node scripts/check-manifest.mjs
 
+      - name: Run prompt localization tests
+        run: node check.mjs
+
       - name: Pack and validate release asset
         run: |
           npm pack --ignore-scripts --json > pack.json
@@ -75,3 +81,27 @@ jobs:
           fail_on_unmatched_files: true
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  publish-npm:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: dist
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Publish to npm via Trusted Publisher
+        run: |
+          node --version
+          npm --version
+          npm publish dist/dsh-prompt-zh.tgz --access public --ignore-scripts --provenance
