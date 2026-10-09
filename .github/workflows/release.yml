@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Tag must match package.json version
         env:
@@ -83,13 +83,17 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
 
   publish-npm:
-    needs: verify
+    needs: [verify, release]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - uses: actions/download-artifact@v4
         with:
           name: release-package
@@ -97,11 +101,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          registry-url: 'https://registry.npmjs.org/'
+          node-version: 24
 
       - name: Publish to npm via Trusted Publisher
         run: |
           node --version
           npm --version
-          npm publish dist/dsh-prompt-zh.tgz --access public --ignore-scripts --provenance
+          npm publish ./dist/dsh-prompt-zh.tgz --access public --ignore-scripts --registry=https://registry.npmjs.org/ --provenance
