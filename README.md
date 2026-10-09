@@ -26,24 +26,8 @@
 |---|---|---|
 | 提示词正文段落与 context | `system-prompt/assemble` | 逐段翻译 `sections`、翻译 `contexts`，并按可见工具集裁剪与重排（`filePolicy` / `networkPolicy` / `delegationPolicy`） |
 | MCP 服务器系统指令 | `system-prompt/assemble` | 逐项接管 `mcp:<server>`（如 `context7`、`github`、`playwright`、`chrome-devtools` 等）的规则与指导说明 |
-| 运行时动态注入提示词片段 | `llm/stream` | 拦截模型输入流，实时将各插件动态注入的消息级提示词翻译为简体中文 |
 
-### 动态注入提示词覆盖范围（`llm/stream` 阶段）
-
-各插件在会话生命周期中注入的消息级提示词片段会被自动拦截并中文化：
-
-1. **运行时上下文快照头部**（`@deepseek-ai/dsh-system-prompt`）：
-   `Current runtime context. This snapshot supersedes earlier runtime-context snapshots.` → `当前运行时上下文。此快照替代此前的运行时上下文快照。`
-2. **工作区指令**（`@deepseek-ai/dsh-agent-instructions`）：
-   工作区指令引导语（`The following workspace instructions may be relevant...`）、基线替换声明与来源标记（`Instructions from: ...`）。
-3. **技能系统提示与更新**（`@deepseek-ai/dsh-tool-skill` / `@deepseek-ai/dsh-skill`）：
-   `<system-reminder>` 中的可用技能列表说明、技能目录更新提示（`The available skill catalog changed...`）、调用纪律与 `<skill_content>` 资源路径指引。
-4. **时间与时区采样**（`@deepseek-ai/dsh-time-context`）：
-   每轮每步注入的时间采样、浏览器时区与自前序上下文耗时（`Time sampled while preparing turn...`，支持 `model-visible message` 与 `step context`）。
-5. **Hindsight 记忆与知识库**（`@vectorize-io/hindsight-coding-agents`）：
-   知识库引导（`<hindsight_knowledge>`）、记忆检索说明（`<hindsight_memory>`）与刷新提醒（`<hindsight_knowledge_refresh>`），包括工具调用时机、纠错机制与归属声明。
-6. **MCP 服务器系统指令与注入片段**（`@deepseek-ai/dsh-mcp-client`）：
-   支持作为独立 section（`system-prompt/assemble`）或动态组合提示词（`llm/stream`）全文识别并翻译 `context7`、`github`、`playwright`、`chrome-devtools` 等服务器的说明，宽容兼容缩进制表符、破折号和单双引号。对于任意自定义未知 MCP，统一将标题规范化为 `### MCP 服务器：<name>`。
+> **注意（v1.2.2 稳定性修复）**：DSH 核心（`@deepseek-ai/dsh-agent-loop`）对下发至 LLM 的请求体实施了严格的不可变保护（`Object.freeze`）。此前的 `llm/stream` 拦截试图就地修改 `options.messages` 会引发只读属性赋值异常；v1.2.2 遵循核心设计规范，纯净保留 `system-prompt/assemble` 组装点，彻底杜绝请求崩溃。
 
 ## 多环境隔离与条件兼容机制
 
@@ -55,8 +39,8 @@
    `policy:network`、`policy:filesystem`、`policy:delegation` 纯按当前可用工具及外部接口动态生成。若会话中没有任何联网/外部工具（亦无外部 MCP 与桌面操作），网络策略段落直接为空串，不会强行插入。
 3. **MCP 动态识别与保守降级**：
    仅当会话中实际连接并加载了对应 MCP 时才产生相应 section。针对预置的常见 MCP（`context7`、`github` 等）进行深度中文化；遇到用户私有的未知 MCP，仅将标题前缀本地化为 `### MCP 服务器：...`，正文不做任何猜测性改写，杜绝误伤。
-4. **动态注入拦截的无侵入性与幂等性**：
-   在 `llm/stream` 阶段，拦截器采用纯字符串特征探测。如果用户的环境未安装某插件，消息中根本不会出现对应的英文特征标签或标头，处理器将直接跳过（fast path），零外部依赖，不抛出任何异常，更不会修改其他正常的对话内容。
+4. **提示词动态片段的无侵入性与幂等性**：
+   在系统提示词组装与翻译过程中，采用纯字符串特征探测与幂等替换。如果环境中未加载某些特性标签，处理器将直接跳过，零外部依赖，不抛出任何异常，更不会污染其他正常的提示词内容。
 
 ## 有意不做的事：工具 schema 保持英文
 
