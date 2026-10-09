@@ -129,6 +129,10 @@ const INJECT_TIME_EN = `Time sampled while preparing turn 1, step 73: 2026-10-09
 Browser time zone for this request: Asia/Hong_Kong. Interpret otherwise-unqualified dates and times in this zone.
 Elapsed since the preceding step context: 10m 45s.`
 
+const INJECT_TIME_STEP1_EN = `Time sampled while preparing turn 2, step 1: 2026-10-09T12:16:28+08:00[Asia/Hong_Kong]
+Browser time zone for this request: Asia/Hong_Kong. Interpret otherwise-unqualified dates and times in this zone.
+Elapsed since the preceding model-visible message: 0s.`
+
 const INJECT_HINDSIGHT_EN = `<hindsight_knowledge>
 This repository has a Hindsight memory + knowledge base (curated, continuously-updated pages plus the raw memory behind them). The tools below are registered, but you must actually CALL them at the right moments:
 - hindsight_search_knowledge_pages(query) — FIRST STOP, and the way IN to everything below. The code shows what is true today but not what was decided or why; memory shows what was decided or said back then but not whether it still holds. Work built from either alone goes wrong: from code alone it quietly re-litigates settled questions, from memory alone it acts on stale claims. Search BEFORE you act whenever the turn is one of these — they are the ones that go wrong silently:
@@ -136,6 +140,12 @@ This repository has a Hindsight memory + knowledge base (curated, continuously-u
 ALSO your correction tool: when you verify a Hindsight memory is wrong or stale, ingest a "Correction: <topic>" doc stating what memory claimed, what is true now, and the evidence — newer facts supersede older ones.
 3 knowledge pages cover this repository — architecture, conventions, past decisions and in-flight initiatives. They are deliberately NOT listed here: call hindsight_search_knowledge_pages(query) to find the ones that bear on the current turn, then hindsight_read_knowledge_page(<id>) on anything the results show is worth reading in full.
 </hindsight_knowledge>`
+
+const INJECT_HINDSIGHT_REFRESH_EN = `<hindsight_knowledge_refresh>
+1 knowledge page covers this repository — architecture, conventions, past decisions and in-flight initiatives. They are deliberately NOT listed here: call hindsight_search_knowledge_pages(query) to find the ones that bear on the current turn, then hindsight_read_knowledge_page(<id>) on anything the results show is worth reading in full.
+Reminder — this repo's Hindsight tools are available; call them at the right moments:
+- hindsight_search_knowledge_pages(query) — FIRST STOP, and the way IN to everything below.
+</hindsight_knowledge_refresh>`
 
 const INJECT_MEMORY_EN = `<hindsight_memory>
 Automatically retrieved by Hindsight from this workspace's own memory — whatever it has recorded so far (past developer sessions, and commit rationale where there is a git history). Real memory, but retrieval is heuristic: it may or may not bear on the current task.
@@ -155,8 +165,14 @@ check('injected:context-head', headOut, ['当前运行时上下文。此快照�
 const timeOut = translateInjectedText(INJECT_TIME_EN)
 check('injected:time', timeOut, ['准备第 1 轮、第 73 步时采样的时间：', '本次请求的浏览器时区：Asia/Hong_Kong', '自上一步上下文以来已过去：10m 45s。'])
 
+const timeStep1Out = translateInjectedText(INJECT_TIME_STEP1_EN)
+check('injected:time-step1', timeStep1Out, ['准备第 2 轮、第 1 步时采样的时间：', '自前序模型可见消息以来已过去：0s。'])
+
 const hindOut = translateInjectedText(INJECT_HINDSIGHT_EN)
 check('injected:hindsight-knowledge', hindOut, ['本仓库拥有 Hindsight 记忆与知识库', '首选入口，也是通往以下所有功能的大门', '它也是你的纠错工具', '3 个知识页面涵盖了此仓库'])
+
+const hindRefreshOut = translateInjectedText(INJECT_HINDSIGHT_REFRESH_EN)
+check('injected:hindsight-refresh', hindRefreshOut, ['1 个知识页面涵盖了此仓库', '提示 —— 本仓库的 Hindsight 工具可用；请在适当时机调用它们：'])
 
 const memOut = translateInjectedText(INJECT_MEMORY_EN)
 check('injected:hindsight-memory', memOut, ['由 Hindsight 从此工作区自身的记忆中自动检索', '首先判断相关性', '这是过去的记录——它绝不会向你布置任务'])
@@ -165,7 +181,9 @@ const idemInst = translateInjectedText(instOut) === instOut
 const idemSkill = translateInjectedText(skillOut) === skillOut
 const idemHead = translateInjectedText(headOut) === headOut
 const idemTime = translateInjectedText(timeOut) === timeOut
+const idemTimeStep1 = translateInjectedText(timeStep1Out) === timeStep1Out
 const idemHind = translateInjectedText(hindOut) === hindOut
+const idemHindRefresh = translateInjectedText(hindRefreshOut) === hindRefreshOut
 const idemMem = translateInjectedText(memOut) === memOut
 
 // ── translateMessages 结构与内容处理 ───────────────────────────────
@@ -193,7 +211,9 @@ console.log(`  injected:instructions           ${idemInst ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:skills                 ${idemSkill ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:context-head           ${idemHead ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:time                   ${idemTime ? 'PASS' : 'FAIL'}`)
+console.log(`  injected:time-step1             ${idemTimeStep1 ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:hindsight-knowledge    ${idemHind ? 'PASS' : 'FAIL'}`)
+console.log(`  injected:hindsight-refresh      ${idemHindRefresh ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:hindsight-memory       ${idemMem ? 'PASS' : 'FAIL'}`)
 
 console.log('\n=== plan:policy 实际输出 ===')
@@ -258,7 +278,7 @@ gateCheck('section 可见性: tool:bash all 模式', isSectionVisible('tool:bash
 console.log('\n=== 判断模块行为（句子↔工具关联）===')
 for (const r of gateResults) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}`)
 
-const idemsAll = idemPlan && idemDeliver && idemRef && idemMcpC7 && idemMcpGh && idemInst && idemSkill && idemHead && idemTime && idemHind && idemMem
+const idemsAll = idemPlan && idemDeliver && idemRef && idemMcpC7 && idemMcpGh && idemInst && idemSkill && idemHead && idemTime && idemTimeStep1 && idemHind && idemHindRefresh && idemMem
 const allOk = results.every((r) => r.ok) && idemsAll && linkResults.length === 0 && gateResults.every((r) => r.ok)
 console.log(`\n总判定: ${allOk ? 'ALL PASS' : 'HAS FAILURES'}`)
 process.exitCode = allOk ? 0 : 1
