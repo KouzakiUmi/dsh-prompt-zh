@@ -2,13 +2,25 @@
 
 把 DSH 内置的**系统提示词**、**MCP 指导说明**以及**各插件动态注入的提示词片段**替换为简体中文。**纯 Host 插件，无 UI。**
 
+## 安装
+
+```sh
+# 从 npm 安装（推荐）
+dsh plugin --profile web add dsh-prompt-zh
+
+# 或从 GitHub 安装
+dsh plugin --profile web add github:KouzakiUmi/dsh-prompt-zh
+```
+
+安装后重启 DSH 生效。`--profile web` 可替换为你的目标 Profile 名称。
+
 ## 支持的宿主环境与插件版本
 
-本插件在以下 DSH 核心与插件环境中完成完整验证与对齐：
+本插件在以下 DSH 核心与插件环境中完成完整验证与对齐；`package.json` 的 `dsh.compatibility.dshReleases` 已逐版本声明兼容状态（`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-alpha.1`、`0.2.1-alpha.2` 为 `compatible`）：
 
 | 目标 / 插件包 | 验证基线版本 | 覆盖说明 |
 |---|---|---|
-| **DSH Core** | `0.2.0-rc.1` / `0.2.1-alpha.1` | 核心宿主运行环境与 Cordis 事件流水线 |
+| **DSH Core** | `0.2.0-rc.2` / `0.2.1-alpha.2` | 核心宿主运行环境与 Cordis 事件流水线 |
 | **DSH Desktop** | `2.0.15-next` | 桌面壳及配套扩展 |
 | `@deepseek-ai/dsh-system-prompt` | `0.2.1-alpha.1` | 系统提示词组装、多段落规约与运行时上下文快照总头部 |
 | `@deepseek-ai/dsh-agent-instructions` | `0.2.1-alpha.1` | AGENTS.md / CLAUDE.md 等工作区指令提示语、来源说明与截断提示 |
@@ -62,12 +74,17 @@
 import { translate, translateContext, filePolicy, networkPolicy, delegationPolicy, translateMcp, translateInjectedText, translateMessages } from 'dsh-prompt-zh'
 ```
 
-运行 `node check.mjs`（**仅源码克隆可用**——该文件不随 npm 包发布）：把真实英文原文喂进去，断言中文输出含关键句、句子关联完整命中且二次翻译逐字节幂等。**升级后先跑它。**
+运行 `npm test`（即 `node tests/check.mjs`，**仅源码克隆可用**——该目录不随 npm 包发布）：把真实英文原文喂进去，断言中文输出含关键句、句子关联完整命中且二次翻译逐字节幂等。**升级后先跑它。**
 
 npm 安装者可用上方 import 示例把导出的纯函数喂入自己的样本做离线验证；若某段英文原文与内置特征不匹配，插件会原样保留该段而不强行翻译。
 
 ## 依赖
 
 - `systemPrompt`（必需，`export const inject`）
+- Node.js `>=18`（`engines` 已声明）
 
 无其他外部服务依赖，无文件系统写入，无网络访问。
+
+## 许可证
+
+[MIT](LICENSE)
