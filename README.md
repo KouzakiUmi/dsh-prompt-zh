@@ -38,10 +38,13 @@ dsh plugin --profile web add github:KouzakiUmi/dsh-prompt-zh
 |---|---|---|
 | 提示词正文段落与 context | `system-prompt/assemble` | 逐段翻译 `sections`、翻译 `contexts`，并按可见工具集裁剪与重排（`filePolicy` / `networkPolicy` / `delegationPolicy`） |
 | MCP 服务器系统指令 | `system-prompt/assemble` | 逐项接管 `mcp:<server>`（如 `context7`、`github`、`playwright`、`chrome-devtools` 等）的规则与指导说明 |
+| 运行时动态注入消息 | `agent/pre-step`（`prepend` 注册） | 翻译汇入 `decision.messages` 的注入用户消息：时间/时区上下文、工作区指令（AGENTS.md 等）包装、技能目录与调用提醒、Hindsight 记忆/知识块、MCP 注入片段；`reject` 决策原样透传，翻译幂等 |
 
 > **注意（v1.2.2 稳定性修复）**：DSH 核心（`@deepseek-ai/dsh-agent-loop`）对下发至 LLM 的请求体实施了严格的不可变保护（`Object.freeze`）。此前的 `llm/stream` 拦截试图就地修改 `options.messages` 会引发只读属性赋值异常；v1.2.2 遵循核心设计规范，纯净保留 `system-prompt/assemble` 组装点，彻底杜绝请求崩溃。
 >
 > **v1.2.3 健壮性修复**：① 按 name 整段替换的条目改为"输入特征匹配才替换"——上游措辞漂移时保守保留英文原文，不再套用可能过时的旧译文；② Hindsight 片段守卫改为大小写不敏感；③ `filePolicy` 在缺少 `read` 工具时不再指示模型"先读取"。
+>
+> **v1.2.5 失效修复**：运行时动态注入（时间/时区上下文、工作区指令、技能目录、Hindsight 记忆/知识块等）此前从未被翻译——它们以用户消息形式经 `agent/pre-step` 瀑布注入，不经过 `system-prompt/assemble`，`lib/injections.js` 的译文在运行时是死代码。现以 `prepend` 注册 `agent/pre-step` 监听器：同为 `prepend` 的注入方（hindsight、time-context 等）按 bundle 加载顺序先于本插件注册、位于本层之内，其注入消息最终汇到本层，一次翻译即全覆盖。已知残留：核心 `dsh-agent-loop` 的 `step()` 会用 `refreshContext` 重新解析 provider 生成的全新英文快照替换 `runtime-context` 消息（"Current runtime context…" 头部与正文），该条消息不受本插件影响。另一固有限制：瀑布 `prepend` 位置取决于 bundle 加载顺序——通过 `dsh plugin add` 新装（追加到 bundles 列表末尾、晚于本插件注册）且同为 `prepend` 的注入方插件位于本层之外，其注入内容不在覆盖范围内。
 
 ## 多环境隔离与条件兼容机制
 

@@ -13,7 +13,8 @@ import {
   translateMcp,
   translateAllMcp,
   translateInjectedText,
-  translateMessages
+  translateMessages,
+  apply
 } from '../lib/index.js'
 
 const PLAN_EN = `You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
@@ -219,6 +220,52 @@ const msgCheck =
   translatedMessages[1].content[0].text.includes('准备第 1 轮、第 73 步时采样的时间：') &&
   translatedMessages[2].content === '普通助手回复保持不变。'
 results.push({ label: 'translateMessages', ok: msgCheck, missing: [] })
+
+// ── agent/pre-step 接线模拟：apply() 注册的瀑布监听器必须翻译 decision.messages ──
+// 复刻宿主瀑布：listener(payload, next)，next() 返回内层决策。
+const registrations = []
+const fakeCtx = {
+  on: (event, listener, options) => registrations.push({ event, listener, options })
+}
+apply(fakeCtx)
+const preStep = registrations.find((r) => r.event === 'agent/pre-step')
+const assembleHook = registrations.find((r) => r.event === 'system-prompt/assemble')
+results.push({
+  label: 'wiring: 双监听器注册（assemble + pre-step/prepend）',
+  ok: preStep !== undefined && assembleHook !== undefined && preStep.options?.prepend === true,
+  missing: preStep === undefined
+    ? ['agent/pre-step 未注册']
+    : (preStep.options?.prepend ? [] : ['agent/pre-step 未启用 prepend'])
+})
+if (preStep !== undefined) {
+  const wiringMessages = [
+    { role: 'user', content: [{ type: 'text', text: INJECT_HINDSIGHT_REFRESH_EN }] },
+    { role: 'user', content: [{ type: 'text', text: INJECT_TIME_EN }] },
+    { role: 'user', content: '普通用户输入不受影响。' }
+  ]
+  const wiringDecision = await preStep.listener(
+    { agent: {}, messages: wiringMessages, signal: {} },
+    async () => ({ kind: 'enter', messages: wiringMessages })
+  )
+  const wiringOk =
+    wiringDecision.kind === 'enter' &&
+    wiringDecision.messages[0].content[0].text.includes('1 个知识页面涵盖了此仓库') &&
+    wiringDecision.messages[1].content[0].text.includes('准备第 1 轮、第 73 步时采样的时间：') &&
+    wiringDecision.messages[2].content === '普通用户输入不受影响。'
+  results.push({ label: 'wiring: pre-step 翻译注入消息', ok: wiringOk, missing: wiringOk ? [] : ['decision.messages 未被翻译'] })
+
+  const rejectDecision = await preStep.listener(
+    { agent: {}, messages: [], signal: {} },
+    async () => ({ kind: 'reject', reason: 'user-rejected' })
+  )
+  results.push({ label: 'wiring: reject 决策原样透传', ok: rejectDecision.kind === 'reject', missing: [] })
+
+  const secondPass = await preStep.listener(
+    { agent: {}, messages: wiringDecision.messages, signal: {} },
+    async () => ({ kind: 'enter', messages: wiringDecision.messages })
+  )
+  results.push({ label: 'wiring: 翻译幂等（二次通过返回原数组）', ok: secondPass.messages === wiringDecision.messages, missing: [] })
+}
 
 console.log('=== 断言结果 ===')
 for (const r of results) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}${r.ok ? '' : '  缺失: ' + r.missing.join(' | ')}`)
