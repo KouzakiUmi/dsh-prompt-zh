@@ -1,93 +1,106 @@
-# dsh-prompt-zh — DSH 系统提示词中文化
+<p align="center">
+  <img src="https://raw.githubusercontent.com/KouzakiUmi/dsh-prompt-zh/main/assets/banner.svg" width="100%" alt="Prompt ZH：让Deepseek使用中文回复。系统段落、MCP 指导与已知运行时注入；其他模型的语言遵循情况可能不同。">
+</p>
 
-把 DSH 内置的**系统提示词**、**MCP 指导说明**以及**各插件动态注入的提示词片段**替换为简体中文。**纯 Host 插件，无 UI。**
+<div align="center">
 
-## 安装
+# Prompt ZH
 
-```sh
-# 从 npm 安装（推荐）
-dsh plugin --profile web add dsh-prompt-zh
+**少一点语言切换，多一点规则可读性。**
 
-# 或从 GitHub 安装
-dsh plugin --profile web add github:KouzakiUmi/dsh-prompt-zh
+DeepSeek Harness 的系统提示词中文化插件。把已知英文规则译成简体中文，并加入中文语言指令，引导 Deepseek 使用中文回复；不改宿主源码，不改工具 schema。
+
+<sub>中文提示词是语言引导，不是输出保证。其他模型不一定同样遵循；本轮未做跨模型回复语言对照测试。</sub>
+
+[![Release](https://github.com/KouzakiUmi/dsh-prompt-zh/actions/workflows/release.yml/badge.svg)](https://github.com/KouzakiUmi/dsh-prompt-zh/actions/workflows/release.yml)
+[![npm](https://img.shields.io/npm/v/dsh-prompt-zh?color=1f6feb&label=npm)](https://www.npmjs.com/package/dsh-prompt-zh)
+[![MIT](https://img.shields.io/badge/license-MIT-68786a)](LICENSE)
+
+[开始使用](#开始使用) · [覆盖范围](#中文化不等于全部改写) · [兼容性](docs/compatibility.md) · [开发文档](docs/development.md) · [更新记录](CHANGELOG.md)
+
+</div>
+
+## 规则更易读，契约不改动
+
+它不是聊天翻译器，也不增加设置页。Prompt ZH 是一个纯 Host 插件，在宿主的提示词组装和运行时注入环节处理已知规则：
+
+| 你关心的内容 | Prompt ZH 如何处理 |
+| --- | --- |
+| 系统行为指引 | 中文化已知提示词段落，按当前可见工具裁剪相关句子 |
+| MCP 使用规则 | 翻译已识别服务器的指导说明；未知正文保守保留 |
+| 运行时提醒 | 处理时间／时区、工作区指令包装、技能目录调用纪律、Hindsight 记忆规则等已知文本 |
+| 工具调用契约 | 保留工具名、description、参数 schema、代码和动态值 |
+
+### 看一个真实例子
+
+```text
+You are an AI agent powered by DeepSeek Harness.
+↓
+你是由 DeepSeek Harness 驱动的 AI agent。
 ```
 
-安装后重启 DSH 生效。`--profile web` 可替换为你的目标 Profile 名称。
-
-## 支持的宿主环境与插件版本
-
-本插件在以下 DSH 核心与插件环境中完成完整验证与对齐；`package.json` 的 `dsh.compatibility.dshReleases` 已逐版本声明兼容状态（`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-alpha.1`、`0.2.1-alpha.2` 为 `compatible`）：
-
-| 目标 / 插件包 | 验证基线版本 | 覆盖说明 |
-|---|---|---|
-| **DSH Core** | `0.2.0-rc.2` / `0.2.1-alpha.2` | 核心宿主运行环境与 Cordis 事件流水线 |
-| **DSH Desktop** | `2.0.15-next` | 桌面壳及配套扩展 |
-| `@deepseek-ai/dsh-system-prompt` | `0.2.1-alpha.1` | 系统提示词组装、多段落规约与运行时上下文快照总头部 |
-| `@deepseek-ai/dsh-agent-instructions` | `0.2.1-alpha.1` | AGENTS.md / CLAUDE.md 等工作区指令提示语、来源说明与截断提示 |
-| `@deepseek-ai/dsh-time-context` | `0.2.1-alpha.1` | 每步时间采样、浏览器时区与步进耗时（含 step 1 前序消息耗时） |
-| `@deepseek-ai/dsh-tool-skill` / `dsh-skill` | `0.2.1-alpha.1` | 可用技能目录 `<available_skills>`、变更提示、调用纪律与资源路径指引 |
-| `@deepseek-ai/dsh-mcp-client` | `0.2.1-alpha.1` | MCP 服务器系统指令，预置 `context7`、`github`、`playwright`、`chrome-devtools` |
-| `@deepseek-ai/dsh-plan-mode` | `0.2.1-alpha.1` | Plan mode 行为守则与多模式目录稳定性说明 |
-| `@deepseek-ai/dsh-tool-jobs` | `0.2.1-alpha.1` | 后台 Job 管理与生命周期提示 |
-| `@deepseek-ai/dsh-experimental-tool-agent-team` | `0.2.1-alpha.1` | Agent Teams 多代理协作纪律 |
-| `@vectorize-io/hindsight-coding-agents` | `0.8.0` | 外部记忆库 `<hindsight_knowledge>`、`<hindsight_memory>`、刷新提醒 `<hindsight_knowledge_refresh>` |
-
-## 它接管什么
-
-| 目标 | 注入点 | 说明 |
-|---|---|---|
-| 提示词正文段落与 context | `system-prompt/assemble` | 逐段翻译 `sections`、翻译 `contexts`，并按可见工具集裁剪与重排（`filePolicy` / `networkPolicy` / `delegationPolicy`） |
-| MCP 服务器系统指令 | `system-prompt/assemble` | 逐项接管 `mcp:<server>`（如 `context7`、`github`、`playwright`、`chrome-devtools` 等）的规则与指导说明 |
-| 运行时动态注入消息 | `agent/pre-step`（`prepend` 注册） | 翻译汇入 `decision.messages` 的注入用户消息：时间/时区上下文、工作区指令（AGENTS.md 等）包装、技能目录与调用提醒、Hindsight 记忆/知识块、MCP 注入片段；`reject` 决策原样透传，翻译幂等 |
-
-> **注意（v1.2.2 稳定性修复）**：DSH 核心（`@deepseek-ai/dsh-agent-loop`）对下发至 LLM 的请求体实施了严格的不可变保护（`Object.freeze`）。此前的 `llm/stream` 拦截试图就地修改 `options.messages` 会引发只读属性赋值异常；v1.2.2 遵循核心设计规范，纯净保留 `system-prompt/assemble` 组装点，彻底杜绝请求崩溃。
->
-> **v1.2.3 健壮性修复**：① 按 name 整段替换的条目改为"输入特征匹配才替换"——上游措辞漂移时保守保留英文原文，不再套用可能过时的旧译文；② Hindsight 片段守卫改为大小写不敏感；③ `filePolicy` 在缺少 `read` 工具时不再指示模型"先读取"。
->
-> **v1.2.5 失效修复**：运行时动态注入（时间/时区上下文、工作区指令、技能目录、Hindsight 记忆/知识块等）此前从未被翻译——它们以用户消息形式经 `agent/pre-step` 瀑布注入，不经过 `system-prompt/assemble`，`lib/injections.js` 的译文在运行时是死代码。现以 `prepend` 注册 `agent/pre-step` 监听器：同为 `prepend` 的注入方（hindsight、time-context 等）按 bundle 加载顺序先于本插件注册、位于本层之内，其注入消息最终汇到本层，一次翻译即全覆盖。已知残留：核心 `dsh-agent-loop` 的 `step()` 会用 `refreshContext` 重新解析 provider 生成的全新英文快照替换 `runtime-context` 消息（"Current runtime context…" 头部与正文），该条消息不受本插件影响。另一固有限制：瀑布 `prepend` 位置取决于 bundle 加载顺序——通过 `dsh plugin add` 新装（追加到 bundles 列表末尾、晚于本插件注册）且同为 `prepend` 的注入方插件位于本层之外，其注入内容不在覆盖范围内。
-
-## 多环境隔离与条件兼容机制
-
-在不同用户的机器上，启用的插件组合与工具权限各不相同（例如未安装 Hindsight、未接入特定 MCP 服务器、或会话处于受限沙箱中）。插件设计了严密的条件判断与自适应机制，确保在任何环境下均稳定运行：
-
-1. **句子级工具感知裁剪（`applySentenceGate`）**：
-   在系统提示词组装时实时读取当前会话的可用工具集合 `tools`。如果当前环境未提供某个工具（如 `bash`、`present`、`job_kill`、`job_output`、`ralph` 等），对应引用该工具的句子会被自动剥除，绝不向模型传达无法使用的工具指引。
-2. **策略段落按需动态组装**：
-   `policy:network`、`policy:filesystem`、`policy:delegation` 纯按当前可用工具及外部接口动态生成。若会话中没有任何联网/外部工具（亦无外部 MCP 与桌面操作），网络策略段落直接为空串，不会强行插入。
-3. **MCP 动态识别与保守降级**：
-   仅当会话中实际连接并加载了对应 MCP 时才产生相应 section。针对预置的常见 MCP（`context7`、`github` 等）进行深度中文化；遇到用户私有的未知 MCP，仅将标题前缀本地化为 `### MCP 服务器：...`，正文不做任何猜测性改写，杜绝误伤。
-4. **提示词动态片段的无侵入性与幂等性**：
-   在系统提示词组装与翻译过程中，采用纯字符串特征探测与幂等替换。如果环境中未加载某些特性标签，处理器将直接跳过，零外部依赖，不抛出任何异常，更不会污染其他正常的提示词内容。
-
-## 有意不做的事：工具 schema 保持英文
-
-**工具的 `description` 与参数 schema 一律保持英文，不翻译。**
-
-这一条是刻意的决定，不是遗漏：
-
-- 工具 schema 是模型调用工具的直接依据，改写它有实际的误配风险；
-- 工具集会随 agent、preset、PTC 模式变化，逐条维护字典的成本高而收益低；
-- 上游任何一个工具改描述，字典就落后一次，且**不会报错**。
-
-## 离线自检
-
-`lib/index.js` 导出了纯函数，可脱离运行中的 DSH 验证：
-
-```js
-import { translate, translateContext, filePolicy, networkPolicy, delegationPolicy, translateMcp, translateInjectedText, translateMessages } from 'dsh-prompt-zh'
+```text
+Browser time zone for this request: unavailable. Ask the user to clarify otherwise-unqualified dates and times.
+↓
+本次请求的浏览器时区：不可用。请用户澄清未明确限定时区的日期和时间。
 ```
 
-运行 `npm test`（即 `node tests/check.mjs`，**仅源码克隆可用**——该目录不随 npm 包发布）：把真实英文原文喂进去，断言中文输出含关键句、句子关联完整命中且二次翻译逐字节幂等。**升级后先跑它。**
+<sub>示例与横幅取自当前翻译函数，并有离线断言；横幅是说明图，不是 DSH 界面截图。</sub>
 
-npm 安装者可用上方 import 示例把导出的纯函数喂入自己的样本做离线验证；若某段英文原文与内置特征不匹配，插件会原样保留该段而不强行翻译。
+## 中文化，不等于全部改写
 
-## 依赖
+**已知规则才替换，未知内容不猜译。** 翻译可以重复执行；没有命中时保留原文。工具相关句子按可见工具集裁剪，不向模型推荐不存在的工具。
 
-- `systemPrompt`（必需，`export const inject`）
-- Node.js `>=18`（`engines` 已声明）
+运行时翻译保留全局兜底，并在 agent 初始化完成后注册本 agent 的作用域监听器，覆盖随后由 preset 挂载的时间等注入；对已经存在的 agent 回补，并随 agent、依赖或插件卸载清理。
 
-无其他外部服务依赖，无文件系统写入，无网络访问。
+> [!IMPORTANT]
+> **仍看到英文，不一定是插件未生效。** 宿主在翻译之后重建的 runtime-context 快照、创建完成后新增的外层注入方，以及宿主之外追加的系统消息仍可能为英文。技能自身的摘要／正文、未知 MCP 正文和工具 schema 也不做全面翻译。完整边界见 [兼容性与覆盖范围](docs/compatibility.md)。
 
-## 许可证
+## 开始使用
 
-[MIT](LICENSE)
+### 安装 npm 版本
+
+统一通过已核对的 `dsh plugin` 入口操作目标 Profile，使用实际 Profile 名称执行：
+
+```powershell
+dsh plugin --profile <profile> add dsh-prompt-zh
+```
+
+更新已安装版本：
+
+```powershell
+dsh plugin --profile <profile> update dsh-prompt-zh@latest
+```
+
+安装／更新后，按部署方式重新启动或重载 DSH，让 Host 插件重新加载。**npm 徽章显示实际已发布版本；main、版本字段与当前运行会话不自动等同。** 不要混用其他 Profile，也不要改用裸 `npm install` / `pnpm install` 或桌面内部脚本修改生产安装。
+
+### 使用固定版本的 Release 包
+
+从 [GitHub Releases](https://github.com/KouzakiUmi/dsh-prompt-zh/releases) 下载 `dsh-prompt-zh.tgz`，使用下载文件的绝对路径：
+
+```powershell
+dsh plugin --profile <profile> add "<tarball 的绝对路径>"
+```
+
+不要把 GitHub 源码 ZIP 当作验证过的发布包。已有安装优先用上面的 npm 更新命令。
+
+## 克制，也包括权限
+
+**无文件系统写入，无网络访问，不读账户凭据，不改宿主安装包。** 插件只处理提示词字符串与消息的安全浅拷贝，并注册自身的生命周期监听器。
+
+- `systemPrompt` 是必需宿主服务；`agents` 动态接入，缺少时保留静态翻译与全局兜底。
+- Node.js 要求 `>=18`。兼容声明不代表所有宿主、provider 和插件组合均完成现场验收。
+- 本轮真实宿主隔离测试使用 Desktop 壳 `2.0.17-next` 随包的 Core 模块 `0.2.1-alpha.2` 和 Cordis `4.0.5-alpha.1`，验证了插件加载、实际时间注入及卸载清理；未在当前生产 Profile 安装验收。
+
+## 进一步了解
+
+| 文档 | 内容 |
+| --- | --- |
+| [兼容性与覆盖范围](docs/compatibility.md) | 能翻译什么、英文残留原因、已验证环境与权限边界 |
+| [开发与验证](docs/development.md) | 模块结构、离线测试、真实宿主验证、打包与发布流程 |
+| [更新记录](CHANGELOG.md) | 1.2.6 的修复内容与已核实的历史里程碑 |
+| [展示资源说明](assets/README.md) | 横幅的事实来源、字体引用与文档素材约定 |
+
+---
+
+[MIT License](LICENSE) · [报告问题](https://github.com/KouzakiUmi/dsh-prompt-zh/issues) · [GitHub Releases](https://github.com/KouzakiUmi/dsh-prompt-zh/releases)

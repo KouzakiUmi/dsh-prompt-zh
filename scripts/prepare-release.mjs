@@ -14,7 +14,11 @@ export function validatePack(info) {
   if (typeof pack.filename !== 'string' || basename(pack.filename) !== pack.filename) throw new Error('Unexpected tarball filename');
   if (!Array.isArray(pack.files)) throw new Error('Missing package file list');
   const paths = new Set(pack.files.map((f) => f.path));
-  for (const required of ['package.json', 'cordis.patch.yml']) {
+  for (const required of [
+    'package.json', 'cordis.patch.yml', 'LICENSE', 'README.md', 'CHANGELOG.md',
+    'lib/index.js', 'lib/injections.js', 'lib/lifecycle.js', 'lib/mcp.js',
+    'docs/compatibility.md', 'docs/development.md', 'assets/banner.svg', 'assets/README.md'
+  ]) {
     if (!paths.has(required)) throw new Error('Missing packaged file: ' + required);
   }
   const leaked = [...paths].filter((x) => x.startsWith('.github/') || x.startsWith('tests/') || x.startsWith('node_modules/'));

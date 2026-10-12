@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title description">
+  <title id="title">Prompt ZH：让Deepseek使用中文回复</title>
+  <desc id="description">DeepSeek Harness 系统提示词中文化。右侧对照来自插件真实的 harness identity 译文；这是说明图，不是宿主界面截图。</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#102a4e"/><stop offset="1" stop-color="#163b69"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#edf4ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="440" rx="24" fill="url(#background)"/>
+  <circle cx="1120" cy="24" r="240" fill="#80b8ff" opacity=".07"/>
+  <circle cx="70" cy="440" r="185" fill="#80b8ff" opacity=".06"/>
+  <g font-family="'Sarasa UI SC','Noto Sans SC',system-ui,sans-serif">
+    <rect x="56" y="52" width="144" height="30" rx="15" fill="#254d79"/>
+    <text x="128" y="73" text-anchor="middle" fill="#c5ddff" font-size="13" letter-spacing="1">DSH · HOST PLUGIN</text>
+    <text x="56" y="144" fill="#fff" font-size="52" font-weight="700"><tspan>让Deepseek</tspan><tspan x="56" dy="62">使用中文回复</tspan></text>
+    <text x="58" y="246" fill="#c6d8ee" font-size="18">中文提示词与语言指令，帮助引导回复。</text>
+    <text x="58" y="278" fill="#90b0d5" font-size="14">系统段落 · MCP 指导 · 已知运行时注入</text>
+    <path d="M58 299H498" stroke="#40678e"/>
+    <text x="58" y="324" fill="#e2edfc" font-size="16">工具名、参数结构与动态值照常保留。</text>
+    <text x="58" y="360" fill="#90b0d5" font-size="14">不改宿主源码，不承诺全量请求中文化。</text>
+    <text x="58" y="386" fill="#90b0d5" font-size="14">其他模型的语言遵循情况可能不同。</text>
+    <rect x="566" y="54" width="578" height="332" rx="18" fill="url(#card)"/>
+    <circle cx="590" cy="80" r="4" fill="#a2b5cb"/><circle cx="606" cy="80" r="4" fill="#a2b5cb"/><circle cx="622" cy="80" r="4" fill="#a2b5cb"/>
+    <text x="1118" y="85" text-anchor="end" fill="#65809c" font-size="12">harness:identity · 译文示例</text>
+    <path d="M586 100H1124" stroke="#dce6f3"/>
+    <text x="590" y="137" fill="#788a9f" font-size="12" letter-spacing="1">BEFORE</text>
+    <text x="590" y="174" fill="#526982" font-size="18">You are an AI agent powered by</text>
+    <text x="590" y="202" fill="#526982" font-size="18">DeepSeek Harness.</text>
+    <rect x="590" y="225" width="44" height="30" rx="8" fill="#dfebfb"/>
+    <path d="M612 232v16m-6-6 6 6 6-6" stroke="#1f6feb" stroke-width="2" fill="none"/>
+    <text x="654" y="246" fill="#1f6feb" font-size="13">保守匹配 · 已知规则才替换</text>
+    <text x="590" y="284" fill="#1f6feb" font-size="12" letter-spacing="1">AFTER</text>
+    <text x="590" y="319" fill="#183c67" font-size="20" font-weight="600">你是由 DeepSeek Harness 驱动的 AI agent。</text>
+    <text x="590" y="358" fill="#788a9f" font-size="12">示例来自当前翻译函数；非 DSH 界面截图。</text>
+  </g>
+</svg>

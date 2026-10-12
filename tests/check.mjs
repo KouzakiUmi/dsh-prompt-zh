@@ -225,7 +225,8 @@ results.push({ label: 'translateMessages', ok: msgCheck, missing: [] })
 // 复刻宿主瀑布：listener(payload, next)，next() 返回内层决策。
 const registrations = []
 const fakeCtx = {
-  on: (event, listener, options) => registrations.push({ event, listener, options })
+  on: (event, listener, options) => registrations.push({ event, listener, options }),
+  inject: () => {} // 本段只验证全局兜底；动态依赖与作用域接线由 lifecycle.mjs 验证。
 }
 apply(fakeCtx)
 const preStep = registrations.find((r) => r.event === 'agent/pre-step')
@@ -266,6 +267,46 @@ if (preStep !== undefined) {
   )
   results.push({ label: 'wiring: 翻译幂等（二次通过返回原数组）', ok: secondPass.messages === wiringDecision.messages, missing: [] })
 }
+
+// 新宿主可在一条规则中列出多个（带反引号的）委派工具。
+const DELEGATION_NEW_EN = 'Start independent delegations with `subagent` or `subagent_fork` together in one assistant message and continue useful work while they run.'
+const DELEGATION_OLD_EN = 'Start independent subagent delegations together in one assistant message and continue useful work while they run.'
+const delegationSections = [
+  { name: 'tool:subagent', text: DELEGATION_NEW_EN },
+  { name: 'tool:legacy-subagent', text: DELEGATION_OLD_EN }
+]
+results.push({ label: 'delegation: 新旧原文均识别', ok: translate('tool:subagent', DELEGATION_NEW_EN) === '' && translate('tool:subagent', DELEGATION_OLD_EN) === '', missing: [] })
+const multiDelegation = delegationPolicy(delegationSections, new Set(['subagent', 'subagent_fork']))
+check('delegation: 多工具规则去重生成中文', multiDelegation, ['subagent、subagent_fork', '等待期间继续处理其他无依赖工作'])
+results.push({ label: 'delegation: 不可见工具裁剪', ok: !delegationPolicy(delegationSections, new Set(['subagent'])).includes('subagent_fork') && delegationPolicy(delegationSections, new Set()) === '', missing: [] })
+const unknownDelegation = 'Start independent delegations with unknown syntax; do not replace this rule.'
+results.push({ label: 'delegation: 漂移或畸形原文保守保留', ok: translate('tool:subagent', unknownDelegation) === unknownDelegation, missing: [] })
+const assembledDelegation = await assembleHook.listener({}, {}, async () => ({
+  sections: delegationSections,
+  contexts: [],
+  tools: [{ name: 'subagent' }, { name: 'subagent_fork' }]
+}))
+const insertedPolicy = assembledDelegation.sections.find((section) => section.name === 'policy:delegation')
+results.push({ label: 'delegation: assemble 正确插入锚点并去除旧英文', ok: insertedPolicy?.text === multiDelegation && assembledDelegation.sections[2] === insertedPolicy && !assembledDelegation.sections.some((section) => section.text.includes('Start independent')), missing: [] })
+const assembledAgain = await assembleHook.listener({}, {}, async () => assembledDelegation)
+results.push({ label: 'delegation: assemble 重入不重复策略', ok: JSON.stringify(assembledAgain) === JSON.stringify(assembledDelegation), missing: [] })
+const BASELINE_EN = `This complete workspace instruction baseline replaces all earlier workspace instruction baselines. ${INJECT_INSTRUCTIONS_EN.split('\n')[1]}`
+const baselineOut = translateInjectedText(BASELINE_EN)
+results.push({ label: 'instructions: 完整基线优先于通用短句/幂等', ok: baselineOut.startsWith('此完整的工作区指令基线替代了之前所有的工作区指令基线。以下工作区指令') && !baselineOut.includes('This complete') && translateInjectedText(baselineOut) === baselineOut, missing: [] })
+for (const [label, original, fragments] of [
+  ['missing', 'Browser time zone for this request: unavailable. Ask the user to clarify otherwise-unqualified dates and times.', ['时区：不可用', '请用户澄清']],
+  ['mixed', 'Browser time zone for this request: mixed ["Asia/Hong_Kong","UTC"]. Ask the user to clarify otherwise-unqualified dates and times.', ['存在多个时区', '["Asia/Hong_Kong","UTC"]', '请用户澄清']],
+  ['elapsed-unavailable', 'Elapsed since the preceding step context: unavailable.', ['已过去：不可用。']]
+]) {
+  const output = translateInjectedText(original)
+  check(`time: ${label}`, output, fragments)
+  results.push({ label: `time: ${label} 幂等`, ok: translateInjectedText(output) === output, missing: [] })
+}
+const changedInstructions = translateInjectedText('Updated instructions from: ~/.dsh/AGENTS.md\n\nThis file changed after it was loaded. Use the following content instead of the previously loaded instructions from this file.')
+check('instructions: 文件更新提示与来源', changedInstructions, ['更新后的指令来源：~/.dsh/AGENTS.md', '此文件在加载后已发生变化。'])
+results.push({ label: 'instructions: 文件更新提示幂等', ok: translateInjectedText(changedInstructions) === changedInstructions, missing: [] })
+const { lifecycleChecks } = await import('./lifecycle.mjs')
+results.push(...await lifecycleChecks())
 
 console.log('=== 断言结果 ===')
 for (const r of results) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}${r.ok ? '' : '  缺失: ' + r.missing.join(' | ')}`)
