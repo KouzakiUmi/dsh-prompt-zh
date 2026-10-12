@@ -60,26 +60,28 @@ Browser time zone for this request: unavailable. Ask the user to clarify otherwi
 
 ### 安装 npm 版本
 
-统一通过已核对的 `dsh plugin` 入口操作目标 Profile，使用实际 Profile 名称执行：
+一般安装参考使用 `dsh plugin`，以下统一以 `web` 作为示例 Profile：
 
 ```powershell
-dsh plugin --profile <profile> add dsh-prompt-zh
+dsh plugin --profile web add dsh-prompt-zh
 ```
 
 更新已安装版本：
 
 ```powershell
-dsh plugin --profile <profile> update dsh-prompt-zh@latest
+dsh plugin --profile web update dsh-prompt-zh@latest
 ```
 
-安装／更新后，按部署方式重新启动或重载 DSH，让 Host 插件重新加载。**npm 徽章显示实际已发布版本；main、版本字段与当前运行会话不自动等同。** 不要混用其他 Profile，也不要改用裸 `npm install` / `pnpm install` 或桌面内部脚本修改生产安装。
+`web` 仅是文档示例，不代表你的实际安装目标。实际操作前应核实环境、Profile、命令入口及授权；Desktop 使用目标桌面壳自带的 DSH Desktop CLI，不用独立公共/Core CLI 管理保留的 `desktop` Profile，也不在 Profile 中裸跑 npm/pnpm 安装。
+
+安装／更新后，按部署方式重新启动或重载 DSH，让 Host 插件重新加载。**npm 徽章显示实际已发布版本；main、版本字段与当前运行会话不自动等同。** 文档示例本身不构成安装或重启授权。
 
 ### 使用固定版本的 Release 包
 
 从 [GitHub Releases](https://github.com/KouzakiUmi/dsh-prompt-zh/releases) 下载 `dsh-prompt-zh.tgz`，使用下载文件的绝对路径：
 
 ```powershell
-dsh plugin --profile <profile> add "<tarball 的绝对路径>"
+dsh plugin --profile web add "<tarball 的绝对路径>"
 ```
 
 不要把 GitHub 源码 ZIP 当作验证过的发布包。已有安装优先用上面的 npm 更新命令。
