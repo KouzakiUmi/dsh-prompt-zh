@@ -1,0 +1,62 @@
+[
+  {
+    "label": "MSYS 完整说明",
+    "text": "The working shell is Git for Windows bash: paths use MSYS drive roots (/c/Users/...), and every tool accepts that form directly — including the bash-native habits (~ home shorthand, /tmp, /dev/null, /usr/bin/...), which resolve in every tool exactly as bash itself resolves them.",
+    "expected": ["当前工作 shell", "/c/Users/...", "/tmp", "/dev/null", "/usr/bin/..."]
+  },
+  {
+    "label": "MSYS 严格盘根说明",
+    "text": "The working shell is Git for Windows bash: paths use MSYS drive roots (/c/Users/...), and every tool accepts that form directly.",
+    "expected": ["当前工作 shell", "/c/Users/..."]
+  },
+  {
+    "label": "旧版 run_code 路径转换",
+    "text": "Path literals written inside a run_code program are translated the same way before the program runs; shell expansion is not available there, so spell paths out instead of relying on $VARS.",
+    "expected": ["运行前以相同方式转换", "没有 shell 展开", "$VARS"]
+  },
+  {
+    "label": "旧版 run_code 严格说明",
+    "text": "Path literals written inside a run_code program are translated before the program runs.",
+    "expected": ["路径字面量", "程序运行前转换"]
+  },
+  {
+    "label": "0.39.4 run_code 转换开启",
+    "text": "In a run_code program, compatible plain MSYS path literals are translated on a best-effort basis; interpolated or tagged templates and uncertain syntax are not rewritten. For direct native Node fs/path APIs, prefer explicit Windows drive-letter or cwd-relative paths. Do not rely on literal rewriting for dynamic paths, shell command strings, routes or search data; tool path arguments are translated separately. Shell expansion is unavailable in program strings, so do not rely on $VARS.",
+    "expected": ["尽力转换", "不确定的语法不会改写", "Windows 盘符", "相对于 cwd", "路径参数会单独转换", "$VARS"]
+  },
+  {
+    "label": "0.39.4 run_code 转换关闭",
+    "text": "In a run_code program, automatic path-literal rewriting is OFF. Direct native Node fs/path APIs require Windows drive-letter or cwd-relative paths, not MSYS /c/... strings. Tool path arguments are still translated separately; program strings do not perform shell expansion.",
+    "expected": ["自动改写已关闭", "不能使用 MSYS /c/...", "路径参数仍会单独转换", "不会进行 shell 展开"]
+  },
+  {
+    "label": "路径方言事实说明",
+    "text": "Path dialect for tool calls and tool results: MSYS drive roots (/c/Users/...) plus the bash-native mounts (~, /tmp, /dev/null, /usr); every tool accepts these forms directly.",
+    "expected": ["工具调用与结果的路径方言", "/c/Users/...", "/dev/null"]
+  },
+  {
+    "label": "pwsh 可见路由",
+    "text": "Prefer this bash tool for ALL commands; use the pwsh tool ONLY when a Windows-native capability (cmdlets, registry, services, WMI) is truly required.",
+    "expected": ["所有命令优先使用此 bash 工具", "只有确实需要", "WMI"]
+  },
+  {
+    "label": "禁止中途切换 shell",
+    "text": "Fix failed bash commands in bash — never switch shells mid-task, never embed `pwsh -Command` inside a bash command (variable expansion and output encoding break there).",
+    "expected": ["绝不在任务中途切换 shell", "`pwsh -Command`", "变量展开和输出编码"]
+  },
+  {
+    "label": "pwsh 隐藏路由",
+    "text": "Prefer this bash tool for ALL commands — it is this host's shell.",
+    "expected": ["所有命令优先使用此 bash 工具", "本机的 shell"]
+  },
+  {
+    "label": "无 PowerShell 工具说明",
+    "text": "Fix failed commands in bash; there is no PowerShell tool on this host.",
+    "expected": ["在 bash 中修正失败的命令", "本机没有 PowerShell 工具"]
+  },
+  {
+    "label": "Bash 工具 MSYS 附加说明",
+    "text": "This bash is Git for Windows (MSYS): paths use drive roots (/c/Users/...), and ~, /tmp, /dev/null and /usr/... resolve exactly as Git Bash resolves them.",
+    "expected": ["Git for Windows（MSYS）", "/c/Users/...", "/dev/null", "/usr/..."]
+  }
+]

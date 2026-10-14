@@ -5,11 +5,16 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import * as promptZh from '../lib/index.js';
+import { blenderEnglish, gitbashSamples } from './new-guidance.mjs';
+import { schemaChecks } from './settings.mjs';
 
 const hostRoot = process.argv[2];
 if (!hostRoot) throw new Error('用法：node tests/host-smoke.mjs <宿主 app 根目录>');
 const requireHost = createRequire(resolve(hostRoot, 'package.json'));
 const load = (name) => import(pathToFileURL(requireHost.resolve(name)).href);
+const schemaModule = await load('@deepseek-ai/schemastery');
+schemaChecks(schemaModule.default);
+console.log('PASS host: 原生 Schema／自包含 JSON 重建／未知键和捕获保护');
 const { Context, Service } = await load('@deepseek-ai/cordis');
 const { createScope, scopeTarget } = await load('@deepseek-ai/dsh-scope');
 const { createUserMessage } = await load('@deepseek-ai/dsh-llm');
@@ -22,6 +27,16 @@ class TestAgents extends Service {
 const { SystemPrompt } = await load('@deepseek-ai/dsh-system-prompt');
 const promptService = ctx.plugin(SystemPrompt, {});
 await promptService;
+class TestProfile extends Service {
+  constructor(owner) { super(owner, 'profileContext'); }
+  resolvePackageManifest(name) {
+    if (name === 'dsh-gitbash-shell') return new URL('./fixtures/package-meta/gitbash/package.json', import.meta.url);
+    if (name === '@vectorize-io/hindsight-coding-agents') return new URL('./fixtures/package-meta/hindsight/package.json', import.meta.url);
+    return name.startsWith('@deepseek-ai/') ? requireHost.resolve(`${name}/package.json`) : undefined;
+  }
+}
+const profileStub = ctx.plugin((owner) => { new TestProfile(owner); });
+await profileStub;
 const localization = ctx.plugin(promptZh);
 await localization;
 const a = {};
@@ -41,14 +56,42 @@ scopedPrompt.context({
   name: 'sandbox:policy', order: 0, required: true,
   text: () => 'Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.'
 });
+scopedPrompt.section({ name: 'mcp:blender', order: 700, text: blenderEnglish });
+scopedPrompt.context({ name: 'gitbash-shell:posix-paths', order: 126, text: () => gitbashSamples[0].text });
+const bashBase = 'Execute a bash command. Unknown schema prose remains English.';
+const bashParameters = { type: 'object', properties: { command: { type: 'string', description: 'The bash command to execute.', default: '/c/example' } } };
+scopedPrompt.tools(() => ({ schemas: [{ name: 'bash', description: bashBase, parameters: bashParameters }] }));
+// 按来源插件真实的 before-next 方式追加指导；检查内层／外层注册两种顺序。
+const appendGuidance = (original, _context, next) => {
+  const bash = original.tools.find((tool) => tool.name === 'bash');
+  if (bash) bash.description += `\n${gitbashSamples[9].text}\n${gitbashSamples[10].text}\n${gitbashSamples[11].text}`;
+  return next();
+};
+let disposeGuidance = ctx.on('system-prompt/assemble', appendGuidance);
 const assembly = await hostPrompt.assemble({ scope: a });
 assert.ok(assembly.sections.some((section) => section.name === 'harness:identity' && section.text.includes('你是由')));
 assert.ok(assembly.sections.some((section) => section.name === 'policy:delegation' && section.text.includes('subagent、subagent_fork')));
 assert.ok(!assembly.sections.some((section) => section.text.includes('Start independent')));
-assert.equal(assembly.tools[0].description, 'Schema descriptions intentionally stay English.');
+assert.equal(assembly.tools.find((tool) => tool.name === 'subagent').description, 'Schema descriptions intentionally stay English.');
 assert.ok(assembly.contexts[0].text.startsWith('当前 DSH 文件策略'));
 assert.ok(hostPrompt.refreshContext(assembly, { scope: a }).contexts[0].text.startsWith('Current DSH file policy'));
 console.log('PASS host: 插件真实加载/assemble 委派规则/工具 schema 不变/refreshContext 边界');
+const checkNewGuidance = (value) => {
+  assert.equal(value.sections.find((section) => section.name === 'mcp:blender').text, blenderEnglish);
+  assert.ok(value.contexts.find((context) => context.name === 'gitbash-shell:posix-paths').text.startsWith('当前工作 shell'));
+  const bash = value.tools.find((tool) => tool.name === 'bash');
+  assert.ok(bash.description.startsWith(bashBase));
+  assert.ok(bash.description.includes('本机没有 PowerShell 工具'));
+  assert.ok(!bash.description.includes('Prefer this bash tool'));
+  assert.deepEqual(bash.parameters, bashParameters);
+};
+checkNewGuidance(assembly);
+disposeGuidance();
+disposeGuidance = ctx.on('system-prompt/assemble', appendGuidance, { prepend: true });
+checkNewGuidance(await hostPrompt.assemble({ scope: a }));
+disposeGuidance();
+assert.equal(hostPrompt.refreshContext(assembly, { scope: a }).contexts.find((context) => context.name === 'gitbash-shell:posix-paths').text, gitbashSamples[0].text);
+console.log('PASS host: Blender/Git Bash 实际组装/附加说明双顺序/参数保留/刷新覆盖边界');
 const text = 'Time sampled while preparing turn 2, step 12: 2026-10-12T17:18:04+08:00[Asia/Hong_Kong]\nElapsed since the preceding step context: unavailable.';
 const message = createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'time-context' } });
 const disposePreset = a.ctx.on('agent/pre-step', async (_payload, next) => {
@@ -136,5 +179,6 @@ disposePreset();
 await aScope.dispose();
 await bScope.dispose();
 await restoredRegistry.dispose();
+await profileStub.dispose();
 await promptService.dispose();
 console.log('host smoke: ALL PASS');

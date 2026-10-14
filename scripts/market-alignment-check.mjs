@@ -180,11 +180,19 @@ for (const f of runtimeFiles) {
   if (!f.rel.endsWith('.js') && !f.rel.endsWith('.mjs')) continue;
   const content = readFileSync(f.abs, 'utf8');
   for (const [p, label] of DANGER_PATTERNS) {
-    if (p.test(content)) dangerFound.push(`${f.rel} (${label})`);
+    if (!p.test(content)) continue;
+    // 唯一新许可：设置页向固定同源状态 GET 发起一次读取；不豁免其他网络或子进程。
+    const nativeStatusRead = label === 'fetch 调用' && f.rel === 'lib/client.js'
+      && [...content.matchAll(/\bfetch\s*\(/g)].length === 1
+      && [...content.matchAll(/\bPATH\s*=/g)].length === 1
+      && /var PATH = ['"]\/api\/prompt-zh\/status['"]/.test(content)
+      && /fetch\(PATH, \{ credentials: ['"]same-origin['"], headers: \{ accept: ['"]application\/json['"] \}, signal: abort\.signal \}\)/.test(content)
+      && !/\bfetch\s*=|https?:\/\//.test(content);
+    if (!nativeStatusRead) dangerFound.push(`${f.rel} (${label})`);
   }
 }
-check('B5 运行时无网络/子进程信号', dangerFound.length === 0,
-  dangerFound.length ? dangerFound.join('; ') : '干净（纯字符串处理）');
+check('B5 无非许可网络/子进程信号', dangerFound.length === 0,
+  dangerFound.length ? dangerFound.join('; ') : '仅允许固定同源诊断 GET；其他网络/子进程仍拒绝');
 
 // ═══ C. awesome-dsh-plugins 条件 ═══
 
@@ -212,9 +220,9 @@ check('D1b displayName 含中文（商店本地化规则）', /[一-鿿]/.test(d
 // D2. description 含中文用途说明
 check('D2 description 含中文', /[一-鿿]/.test(pkg.description || ''));
 
-// D3. 权限保守声明：README 声明无文件/网络访问
-check('D3 README 声明无文件系统写入', /无文件系统写入|no file system/i.test(readme));
-check('D3b README 声明无网络访问', /无网络访问|no network/i.test(readme));
+// D3. 按当前功能诚实声明：Profile 保存由宿主完成，诊断限定同源，不冒充完全无 I/O。
+check('D3 README 明确宿主负责 Profile 写入', /宿主原生配置表单/.test(readme) && /由宿主写入当前 Profile/.test(readme));
+check('D3b README 明确同源诊断和无外部翻译', /同源 GET/.test(readme) && /不进行外部网络翻译/.test(readme));
 
 // ═══ 输出 ═══
 console.log('\n═══ 市场收录条件对齐验证 ═══\n');

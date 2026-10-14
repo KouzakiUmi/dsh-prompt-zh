@@ -225,6 +225,11 @@ results.push({ label: 'translateMessages', ok: msgCheck, missing: [] })
 // 复刻宿主瀑布：listener(payload, next)，next() 返回内层决策。
 const registrations = []
 const fakeCtx = {
+  get: (name) => name === 'profileContext' ? {
+    resolvePackageManifest: (packageName) => packageName === 'dsh-gitbash-shell'
+      ? new URL('./fixtures/package-meta/gitbash/package.json', import.meta.url)
+      : packageName === '@vectorize-io/hindsight-coding-agents' ? new URL('./fixtures/package-meta/hindsight/package.json', import.meta.url) : undefined
+  } : undefined,
   on: (event, listener, options) => registrations.push({ event, listener, options }),
   inject: () => {} // 本段只验证全局兜底；动态依赖与作用域接线由 lifecycle.mjs 验证。
 }
@@ -307,6 +312,10 @@ check('instructions: 文件更新提示与来源', changedInstructions, ['更新
 results.push({ label: 'instructions: 文件更新提示幂等', ok: translateInjectedText(changedInstructions) === changedInstructions, missing: [] })
 const { lifecycleChecks } = await import('./lifecycle.mjs')
 results.push(...await lifecycleChecks())
+const { newGuidanceChecks } = await import('./new-guidance.mjs')
+results.push(...await newGuidanceChecks(assembleHook.listener, preStep.listener))
+const { settingsChecks } = await import('./settings.mjs')
+results.push(...await settingsChecks())
 
 console.log('=== 断言结果 ===')
 for (const r of results) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}${r.ok ? '' : '  缺失: ' + r.missing.join(' | ')}`)
