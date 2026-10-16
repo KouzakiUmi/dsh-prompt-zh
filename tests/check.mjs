@@ -236,6 +236,18 @@ const fakeCtx = {
 apply(fakeCtx)
 const preStep = registrations.find((r) => r.event === 'agent/pre-step')
 const assembleHook = registrations.find((r) => r.event === 'system-prompt/assemble')
+const canonicalSdk = {
+  name: 'tools:sdk', interpolate: false,
+  text: '## Writing code for run_code\n\nWhen no separate `bash` schema is supplied, invoke a declared `bash` binding inside `run_code`:\n\n```ts\ninterface ToolArgsMap { bash: { command: string } }\n```'
+}
+const sdkAssembly = await assembleHook.listener({}, {}, async () => ({
+  sections: [canonicalSdk, { name: 'tools:ptc-only', text: 'Only run_code is directly callable.' }],
+  tools: [{ name: 'run_code' }], contexts: []
+}))
+results.push({ label: 'PTC: literal SDK 保持逐字一致，其他提示词仍翻译',
+  ok: sdkAssembly.sections.find(section => section.name === 'tools:sdk') === canonicalSdk &&
+    sdkAssembly.sections.find(section => section.name === 'tools:ptc-only')?.text.includes('你唯一能直接调用的工具'),
+  missing: [] })
 results.push({
   label: 'wiring: 双监听器注册（assemble + pre-step/prepend）',
   ok: preStep !== undefined && assembleHook !== undefined && preStep.options?.prepend === true,
