@@ -27,6 +27,14 @@ export async function settingsChecks() {
     for (const component of COMPONENTS) assert.ok(rows.some((row) => row.component === component.id), component.id);
     assert.ok(rows.every((row) => typeof row.defaultText === 'string' && row.defaultText.length > 0));
   });
+  check('settings: Core 兼容清单与各核心译文版本元数据保持一致', () => {
+    const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+    const compatible = Object.entries(manifest.dsh.compatibility.dshReleases).filter(([, state]) => state === 'compatible').map(([version]) => version).sort();
+    for (const component of COMPONENTS.filter((item) => !item.thirdParty)) {
+      assert.deepEqual([...component.versions].sort(), compatible, component.id);
+      for (const row of rows.filter((item) => item.component === component.id)) assert.deepEqual([...row.versions].sort(), compatible, row.id);
+    }
+  });
   const identity = rows.find((row) => row.id === 'core:harness:identity');
   const timestamp = rows.find((row) => row.component === 'time' && row.defaultText.startsWith('准备第 $1'));
   const bash = rows.find((row) => row.component === 'gitbash' && row.defaultText.startsWith('当前工作 shell') && row.defaultText.includes('/tmp'));

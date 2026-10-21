@@ -26,7 +26,7 @@
 
 ## 设置与严格版本门控
 
-本次 Host＋Client 接入核验以 Core `0.2.1-alpha.2` 的 `settings`、`configForms` 和已认证 `connection.fetch` 契约为基线；不沿用旧纯 Host 版本对早期 Core 的界面兼容声明。缺少相应服务或 Schema 时不能冒充可保存配置。
+Host＋Client 接入已核验 Core `0.2.1-alpha.2` 与 `0.2.1-alpha.3` 的 `settings`、`configForms` 和已认证 `connection.fetch` 契约；不沿用旧纯 Host 版本对早期 Core 的界面兼容声明。缺少相应服务或 Schema 时不能冒充可保存配置。兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。
 
 每个内置译文条目使用同一运行时登记点，保存的覆盖值在真实 section、context、消息或附加说明替换函数中读取。组件关闭后保留原文。第三方按精确版本放行：Git Bash 0.39.0／0.39.4 的新旧 `run_code` 提示分别匹配对应版本，Hindsight 包装基线为 0.8.1；未知版本不放行。
 
@@ -51,24 +51,27 @@
 
 ## 验证证据与版本归属
 
-本轮在 `tests/host-smoke.mjs` 中从实际安装的 Desktop `resources/app` 解析模块。全部验证在隔离内存上下文完成，不加载生产 Profile、凭据或真实 provider。
+[宿主隔离测试](<../tests/host-smoke.mjs>)先前直接解析展开的 Desktop 模块；2026-10-15 再核验了当前 ASAR 版本的只读静态副本。提取时验证归档文件完整性，未修改安装包；测试只创建内存服务，不加载生产 Profile、凭据或真实 provider。
 
-| 层级／包 | 本轮基线 | 核验范围 |
+| 层级／包 | 先前基线 → 当前再核验 | 核验范围 |
 | --- | --- | --- |
-| Desktop 桌面壳 | `2.0.17-next` | 安装包 manifest；不是 CLI 版本 |
-| `@deepseek-ai/dsh-system-prompt` | `0.2.1-alpha.2` | 真实组装、工具 schema 保留、`refreshContext` 覆盖边界 |
-| `@deepseek-ai/dsh-time-context` | `0.2.1-alpha.2` | 真实时间注入、已知与缺省时区 |
-| `@deepseek-ai/dsh-scope` | 随上述宿主解析 | 真实 agent 作用域路由与子作用域隔离 |
-| `@deepseek-ai/cordis` | `4.0.5-alpha.1` | 动态依赖、冻结消息、卸载／恢复、插件清理 |
+| Desktop 桌面壳 | `2.0.17-next` → `2.0.18-next` | 安装包 manifest 与当前消费进程来源；不是 CLI 版本 |
+| `@deepseek-ai/dsh`（Core） | 当前 `0.2.1-alpha.3` | ASAR 中实际 Core manifest，与壳版本分开 |
+| `@deepseek-ai/dsh-system-prompt` | `0.2.1-alpha.2` → `0.2.1-alpha.3` | 真实模块组装、工具 schema 保留、`refreshContext` 覆盖边界 |
+| `@deepseek-ai/dsh-time-context` | `0.2.1-alpha.2` → `0.2.1-alpha.3` | 真实时间注入、已知与缺省时区 |
+| `@deepseek-ai/dsh-scope` | 随对应 Core 解析 | agent 作用域路由与子作用域隔离 |
+| `@deepseek-ai/cordis` | `4.0.5-alpha.1` → `4.0.5-alpha.2` | 动态依赖、冻结消息、卸载／恢复、插件清理 |
+| `@deepseek-ai/schemastery` | `3.18.5-alpha.1` → `3.18.5-alpha.2` | 保存值校验、动态占位符保护与客户端 JSON 重建 |
+| `@deepseek-ai/dsh-web-frontend` | 当前 `0.2.1-alpha.3` | 实际前端内置 React 18.3.1 的隔离浏览器回归：编辑、保存进入真实翻译、草稿还原、窄屏布局与依赖卸载 |
 
 **这些是具体包和桌面壳的版本，不是 DSH CLI 或 DSH 自带 npm 管理器版本。** 本轮不以 `dsh --version` 推断 Core，也未单独验证 CLI 发行版本。
 
-清单保留 `0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-alpha.1`、`0.2.1-alpha.2` 的历史兼容声明；并非本轮逐版本重新安装验收。离线测试覆盖已有英文样本和真实契约，但不是所有 provider／插件组合的生产验收。
+当前工作区清单明确列出 `0.2.1-alpha.2` 和 `0.2.1-alpha.3`，核心译文条目的精确版本元数据与之同步。更早 Core 不因历史版本曾可用而自动放行。Git Bash 0.39.4 与 Hindsight 0.8.1 现场版本未变，原兼容列表不增加重复项；MCP 无可核验服务器版本时仍停译。以上不是生产 Profile 写入、全 provider 组合或所有新增英文文本的验收；本次未安装或重新发布。
 
 ## 权限与数据边界
 
-- 纯 Host 插件，无客户端 UI、浏览器存储或设置页。
-- 插件运行时无文件系统写入、无网络访问，不读账户凭据、不启动子进程。
+- Host 与 Client 物理隔离；原生设置页不使用浏览器存储代替 Profile 保存。
+- 保存通过宿主原生配置表单完成；版本证据只读公开解析的包 manifest。诊断仅访问已认证的固定同源 GET，不向外部翻译服务发送提示词，不读账户凭据、不启动子进程。
 - 消息翻译采用安全浅拷贝，保留身份和来源；无匹配时返回原消息数组，`reject` 决策原样透传。
 - 精确命中的用户文本也可能被已有注入翻译器改写；它不是任意文本的语言隔离器。
 - 没有工具时裁掉相关指引，但翻译插件不授予、扩大或代替宿主权限。

@@ -57,7 +57,8 @@
     "compatibility": {
       "node": ">=18",
       "dshReleases": {
-        "0.2.1-alpha.2": "compatible"
+        "0.2.1-alpha.2": "compatible",
+        "0.2.1-alpha.3": "compatible"
       }
     }
   },

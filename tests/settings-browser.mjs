@@ -1,6 +1,6 @@
 // 可选的真实 React / Chromium 隔离测试。只用已安装库和静态 vendor，不启动服务器、不登录生产页面。
 import assert from 'node:assert/strict';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { COMPONENTS, TranslationRuntime } from '../lib/rules.js';
@@ -9,13 +9,20 @@ const [hostRoot, playwrightManifest, chrome] = process.argv.slice(2);
 if (!hostRoot || !playwrightManifest || !chrome) throw new Error('用法：node tests/settings-browser.mjs <宿主 app> <现有 Playwright package.json> <现有 Chromium executable>');
 const requireBrowser = createRequire(resolve(playwrightManifest));
 const { chromium } = requireBrowser('playwright-core');
-const vendorPath = join(hostRoot, 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets/vendor-BlFz1smR.js');
-const vendor = readFileSync(vendorPath, 'utf8');
-const shell = readFileSync(join(hostRoot, 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets/index-C5TXjxs_.js'), 'utf8');
-// 提取同一静态壳的内置库声明；截断在模块映射之后，不运行应用 bootstrap 或任何 Host 服务。
-const boundary = shell.indexOf('const vM=', shell.indexOf('function gM()'));
-assert.ok(boundary > 0, '实际前端内置模块映射已变化，请重新核验');
-const libraries = shell.slice(0, boundary);
+const assets = join(hostRoot, 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets');
+function uniqueAsset(pattern) {
+  const matches = readdirSync(assets).filter((name) => pattern.test(name));
+  assert.equal(matches.length, 1, '前端资源必须唯一；存在歧义时重新核验，不能猜测');
+  return matches[0];
+}
+const vendorName = uniqueAsset(/^vendor-[\w-]+\.js$/u);
+const vendor = readFileSync(join(assets, vendorName), 'utf8');
+const shell = readFileSync(join(assets, uniqueAsset(/^index-[\w-]+\.js$/u)), 'utf8');
+// 只截取静态库声明；映射必须是无嵌套对象的标准内置库表，绝不运行应用 bootstrap。
+const mapping = /function ([\w$]+)\(\)\{return\{react:[^{}]*\}\}/u.exec(shell);
+assert.ok(mapping && mapping[0].includes('"react-dom/client"') && mapping[0].includes('"@deepseek-ai/cordis"'), '实际前端内置模块映射已变化，请重新核验');
+const libraries = shell.slice(0, mapping.index + mapping[0].length);
+const mappingName = mapping[1];
 const client = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8');
 const output = resolve('tests/artifacts');
 assert.equal(output, join(process.cwd(), 'tests', 'artifacts'));
@@ -31,9 +38,9 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:24px;font-family:system-ui"><p>隔离界面测试数据，不是生产 Profile</p><main id="root"></main></body></html>');
-  await page.evaluate(async ({ vendor, libraries }) => {
+  await page.evaluate(async ({ vendor, libraries, vendorName, mappingName }) => {
     const vendorUrl = URL.createObjectURL(new Blob([vendor], { type: 'text/javascript' }));
-    const librarySource = libraries.replaceAll('./vendor-BlFz1smR.js', vendorUrl) + '\nwindow.testBuiltins = gM();';
+    const librarySource = libraries.replaceAll('./' + vendorName, vendorUrl) + '\nwindow.testBuiltins = ' + mappingName + '();';
     const libraryUrl = URL.createObjectURL(new Blob([librarySource], { type: 'text/javascript' }));
     try {
       await import(libraryUrl);
@@ -41,7 +48,7 @@ try {
       window.testReactDOM = window.testBuiltins['react-dom/client'];
       if (!window.testReact?.createElement || !window.testReactDOM?.createRoot) throw new Error('实际前端库契约已变化');
     } finally { URL.revokeObjectURL(libraryUrl); URL.revokeObjectURL(vendorUrl); }
-  }, { vendor, libraries });
+  }, { vendor, libraries, vendorName, mappingName });
   await page.evaluate((data) => {
     window.testMetadata = data;
     window.testWrites = 0;
