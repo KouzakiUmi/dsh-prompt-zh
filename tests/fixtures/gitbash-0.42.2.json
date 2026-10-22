@@ -1,0 +1,42 @@
+[
+  {
+    "label": "pwsh 可见路由",
+    "text": "Prefer this bash tool for shell syntax, scripts, pipelines, redirection, globbing and POSIX utilities; use the pwsh tool ONLY when PowerShell cmdlets, registry, services or WMI are truly required.",
+    "expected": "只有确实需要 PowerShell cmdlet"
+  },
+  {
+    "label": "拒绝后不切换原生通道",
+    "text": "Fix failed bash syntax in bash; never embed `pwsh -Command` inside a bash command as a workaround (variable expansion and output encoding break there). Choose a separately offered native route for its documented purpose before execution, never as a policy-denial retry.",
+    "expected": "绝不要把它当作策略拒绝后的重试手段"
+  },
+  {
+    "label": "pwsh 隐藏路由",
+    "text": "Prefer this bash tool for shell syntax, scripts, pipelines, redirection, globbing and POSIX utilities — it is this host's shell.",
+    "expected": "它就是本机的 shell"
+  },
+  {
+    "label": "不得臆造隐藏工具",
+    "text": "Fix failed bash syntax in bash; no PowerShell tool is offered here. Do not invent a hidden tool or embed another interpreter as a workaround.",
+    "expected": "不要臆造隐藏工具"
+  },
+  {
+    "label": "持久终端方言",
+    "text": "The persistent terminal tools (terminal_open/read/send/...) run Git Bash (MSYS) on this host: the same drive-root paths (/c/...) and MINGW64 semantics as this bash tool; they are NOT PowerShell.",
+    "expected": "它们不是 PowerShell"
+  },
+  {
+    "label": "原生 argv 和编码",
+    "text": "Use gitbash_native before execution when a Windows .exe needs exact literal argv such as /all or /c without MSYS conversion, or independently declared stdout/stderr encodings. Supply an absolute executable, mark each argument literal or path, and select only a known encoding (raw for unknown/mixed bytes). It does not implement shell pipelines, expansion or .cmd/.bat wrappers; only resolved danger-full-access can execute it.",
+    "expected": "只有解析为 danger-full-access 时才能执行"
+  },
+  {
+    "label": "完整路径转换边界",
+    "text": "Use gitbash_to_native_path only for a complete caller-declared MSYS filesystem path that a native Node fs/path API needs, especially a runtime-built value. Read native_path from the result. Never convert routes, search strings or shell/program source. Already-native or cwd-relative Node paths need no conversion; ordinary tool path fields already use their own translation. Conversion grants no access.",
+    "expected": "转换本身不授予任何访问权限"
+  },
+  {
+    "label": "拒绝和解码失败纪律",
+    "text": "Choose the execution route before running. A policy/access denial is a stop condition: never switch tools, shells or permissions to bypass it. A decoding/display failure does not mean the command failed to run; preserve its exit facts and never blindly repeat a side-effecting command. Do not guess unknown or mixed encodings.",
+    "expected": "绝不要盲目重复有副作用的命令"
+  }
+]

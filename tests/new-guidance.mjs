@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { translateMcp, translateAllMcp, translateInjectedText, translateContext, translateGitBashText, translateToolGuidance } from '../lib/index.js';
+import { TranslationRuntime } from '../lib/rules.js';
 
 export const blenderEnglish = readFileSync(new URL('./fixtures/blender.md', import.meta.url), 'utf8');
 export const gitbashSamples = JSON.parse(readFileSync(new URL('./fixtures/gitbash.json', import.meta.url), 'utf8'));
+// 与旧版 fixture 分开，保留原覆盖；原文取自 0.42.2 的 inline-tools 路由指导，不含 PTC 分支。
+const gitbash0422 = JSON.parse(readFileSync(new URL('./fixtures/gitbash-0.42.2.json', import.meta.url), 'utf8'));
 
 export async function newGuidanceChecks(assemble, preStep) {
   const results = [];
@@ -59,6 +62,17 @@ export async function newGuidanceChecks(assemble, preStep) {
       assert.equal(translateContext('gitbash-shell:posix-paths', sample.text), output);
     });
   }
+  for (const sample of gitbash0422) {
+    check(`gitbash 0.42.2: ${sample.label} 双管线／精确门控／幂等`, () => {
+      const current = new TranslationRuntime({}, () => ({ gitbash: { version: '0.42.2' } })).operation('test');
+      const previous = new TranslationRuntime({}, () => ({ gitbash: { version: '0.39.4' } })).operation('test');
+      const output = translateGitBashText(sample.text, current);
+      assert.ok(output.includes(sample.expected));
+      assert.equal(translateInjectedText(sample.text, current), output);
+      assert.equal(translateGitBashText(output, current), output);
+      assert.equal(translateGitBashText(sample.text, previous), sample.text);
+    });
+  }
   check('gitbash: 严格模式不扩展虚拟挂载支持／新版关闭与开启不混淆', () => {
     assert.ok(!translateGitBashText(gitbashSamples[1].text).includes('/tmp'));
     assert.ok(translateGitBashText(gitbashSamples[4].text).includes('尽力转换'));
@@ -96,8 +110,11 @@ export async function newGuidanceChecks(assemble, preStep) {
     tools
   });
   const assembled = await assemble({}, {}, async () => assembly);
-  check('wiring: 未核验 MCP 版本保留原文／已核验 Git Bash 翻译', () => {
-    assert.equal(assembled.sections.find((section) => section.name === 'mcp:blender').text, blenderEnglish);
+  check('wiring: MCP 已知 server 按原文守卫翻译／未核验版本仍执行／已核验 Git Bash 翻译', () => {
+    const blender = assembled.sections.find((section) => section.name === 'mcp:blender').text;
+    assert.notEqual(blender, blenderEnglish);
+    assert.ok(blender.includes('### MCP 服务器：blender'));
+    assert.ok(blender.includes('Blender 必须处于运行状态'));
     assert.ok(assembled.contexts[0].text.startsWith('当前工作 shell'));
     assert.ok(assembled.contexts[0].text.includes('尽力转换'));
     assert.ok(assembled.tools[0].description.includes('本机没有 PowerShell 工具'));
@@ -112,7 +129,7 @@ export async function newGuidanceChecks(assemble, preStep) {
   const message = Object.freeze({ role: 'user', content: Object.freeze([Object.freeze({ type: 'text', text: `${blenderEnglish}\n${gitbashSamples[0].text}` })]) });
   const decision = await preStep({}, async () => ({ kind: 'enter', messages: Object.freeze([message]) }));
   check('wiring: pre-step 覆盖新增文本，不改写冻结消息', () => {
-    assert.ok(decision.messages[0].content[0].text.includes('# Bundled Manuals'));
+    assert.ok(decision.messages[0].content[0].text.includes('# 随附手册'));
     assert.ok(decision.messages[0].content[0].text.includes('当前工作 shell'));
     assert.ok(message.content[0].text.includes('# Bundled Manuals'));
   });

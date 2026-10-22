@@ -14,8 +14,11 @@ import {
   translateAllMcp,
   translateInjectedText,
   translateMessages,
+  translateGitBashText,
   apply
 } from '../lib/index.js'
+import { TranslationRuntime } from '../lib/rules.js'
+import { coldCatalogChecks } from './cold-catalog.mjs'
 
 const PLAN_EN = `You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
 
@@ -35,6 +38,16 @@ const FILEREF_EN = `Tokens prefixed with @ are paths the user explicitly referen
 
 const IDENTITY_EN = `You are an AI agent powered by DeepSeek Harness.`
 const JOBS_EN = `Track every background job id you start. You are notified in-session when a job finishes — do not busy-poll or sleep on one; keep working on independent steps and do not duplicate a running job's work. Before giving a final answer, collect every still-relevant job with job_output (set wait: true only when you are genuinely blocked on it), and job_kill jobs that stopped mattering.`
+// 以下三条按宿主源码原文登记，用于验证「原文守卫命中才替换」。
+const PTC_ONLY_EN = '`run_code` is the only tool you can call directly — a tool call naming any other tool fails. Reach every tool the SDK declares below from inside the program.'
+const RALPH_EN = `Use the ralph tool ONLY when the direct human explicitly asks for a Ralph loop or fresh-agent iterative execution. Each Ralph round starts a fresh child with no conversation seed and uses the shared workspace as durable memory. Completion and blockers are worker reports, not independent evaluation. Use same-session goal tools for ordinary long-running objectives, and plain subagents or workflows for bounded delegation and fan-out.`
+const TEAM_POLICY_EN = `Agent Teams is available in this session, but create teammates only when the user explicitly asks to use Agent Teams or teammates.
+
+The Team Lead and all teammates share the same working directory and filesystem. Edits are immediately visible to every member. Split write work into disjoint scopes, record expected write scopes on shared tasks, and use task dependencies when work must be ordered. Write-scope overlap is advisory, not a lock.
+
+Prefer read/edit/write for file changes. If a file operation returns FS_STALE_VERSION, read the current file, rebase your intended change onto the new content, and retry. Bash, formatters, code generators, and scripts are not fully protected by the filesystem version guard; coordinate them explicitly and have the Lead review the final diff and run tests.
+
+Use the target returned by spawn_teammate or list_agents for send_message, or as owner when assigning or filtering shared tasks. send_message steers a running target at its nearest step boundary and starts or resumes an inactive target. inactive means no turn is executing; it does not describe task completion, success, failure, or waiting for other agents. provisioning means member creation is in progress; failed means member creation failed. A peer message starts with its sender name. A successful send does not mean the recipient has processed it. Shared-task workflow is list, get, claim with the current revision, perform the work, then complete. Task readiness never starts an owner. Before wait_agent, use list_agents and make sure another required member is running or provisioning; use send_message first when the required member is inactive. wait_agent observes only changes after that call starts, never wakes a member, and returns noProgress immediately when no other member can produce a change. Re-list after wakeup or timeout. The Lead must wait for required teammates before giving the final answer.`
 
 // 每个断言：修复后译文里必须出现的片段
 const EXPECTED = {
@@ -45,7 +58,7 @@ const EXPECTED = {
 	jobs: ['job_output']
 }
 
-const results = []
+const results = [...coldCatalogChecks]
 const check = (label, text, fragments) => {
 	const missing = fragments.filter((f) => !text.includes(f))
 	results.push({ label, ok: missing.length === 0, missing })
@@ -208,6 +221,24 @@ check('injected:mcp-full', injectedMcpOut, [
 ])
 const idemInjectedMcp = translateInjectedText(injectedMcpOut) === injectedMcpOut
 
+// ── 新宿主形态原文（Core 0.2.1-alpha.3／rc.2）：终端纪律、会话检索、运行时命名段落 ──
+// 这些 section 在旧版本里没有或在 alpha.3 起改变了措辞，用宿主源码原文固定放行。
+const PTY_EN = `Use a terminal session only when work needs persistent terminal state or interactive stdin; prefer shell/read/write/edit for bounded one-shot operations. Track every terminal session id and close sessions that no longer matter. An inferred_idle or timeout result does not prove the foreground command exited.`
+const SESSION_QUERY_EN = `Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_trace, session_event_trace, or session_event_read when you need lineage, relationships, or exact data.`
+const HARNESS_SOURCE_RT_EN = `The runtime context names the DeepSeek Harness implementation checkout. The checkout location and current working directory are separate values and may differ; never infer the working directory from the checkout path. Use pwd to determine the current working directory. Use this checkout only to inspect or extend DSH itself.`
+const WEB_SURFACE_RT_EN = `You are interacting with the user through the DeepSeek Harness Web GUI whose URL the runtime context names. When the user refers to "this page", "this GUI", or "this app" without naming another target, they mean this GUI. The browser provides no implicit DOM, route, or screenshot context. The client-plugin HMR receiver is active, but client-plugin changes reload without a refresh only while \`pnpm run dev:web\` is also running from this same checkout to rebuild their bundles; verify that watcher before promising automatic updates. Every other change — the apps/web shell and plain packages — requires rebuilding the affected Web artifacts and verifying this existing URL after a page refresh. Starting another server does not update this GUI. The apps/web Vite entry builds the shell but is not a standalone application because only dsh web injects window.__DSH_BOOT__. Do not start a replacement server unless the user asks; if one is needed, use a managed background job and verify its exact URL.`
+
+const ptyOut = translate('tool:pty', PTY_EN)
+check('tool:pty', ptyOut, ['仅在需要持久终端状态或交互式 stdin 时使用终端会话', '记录每个终端会话 id', 'inferred_idle 或超时结果不能证明前台命令已退出'])
+const sessionQueryOut = translate('tool:session-query', SESSION_QUERY_EN)
+check('tool:session-query', sessionQueryOut, ['需要定位既往会话中的相关工作用 session_search', '搜索结果不带游标，且限定在当前工作区', 'session_event_read 跟进'])
+const harnessSourceRtOut = translate('harness:source', HARNESS_SOURCE_RT_EN)
+check('harness:source（运行时命名形态）', harnessSourceRtOut, ['运行时上下文会指明 DeepSeek Harness 的实现目录', '绝不要从检出路径推断工作目录', '此 checkout 仅用于检查或扩展 DSH 本身'])
+const webSurfaceRtOut = translate('app:web-surface', WEB_SURFACE_RT_EN)
+check('app:web-surface（运行时命名形态）', webSurfaceRtOut, ['你通过运行时上下文给出的 URL', 'client-plugin 的 HMR 接收器已启用', 'window.__DSH_BOOT__'])
+const idemRc2 = translate('tool:pty', ptyOut) === ptyOut && translate('tool:session-query', sessionQueryOut) === sessionQueryOut
+  && translate('harness:source', harnessSourceRtOut) === harnessSourceRtOut && translate('app:web-surface', webSurfaceRtOut) === webSurfaceRtOut
+
 // ── translateMessages 结构与内容处理 ───────────────────────────────
 const sampleMessages = [
   { role: 'system', content: INJECT_INSTRUCTIONS_EN },
@@ -241,7 +272,7 @@ const canonicalSdk = {
   text: '## Writing code for run_code\n\nWhen no separate `bash` schema is supplied, invoke a declared `bash` binding inside `run_code`:\n\n```ts\ninterface ToolArgsMap { bash: { command: string } }\n```'
 }
 const sdkAssembly = await assembleHook.listener({}, {}, async () => ({
-  sections: [canonicalSdk, { name: 'tools:ptc-only', text: 'Only run_code is directly callable.' }],
+  sections: [canonicalSdk, { name: 'tools:ptc-only', text: PTC_ONLY_EN }],
   tools: [{ name: 'run_code' }], contexts: []
 }))
 results.push({ label: 'PTC: literal SDK 保持逐字一致，其他提示词仍翻译',
@@ -328,6 +359,8 @@ const { newGuidanceChecks } = await import('./new-guidance.mjs')
 results.push(...await newGuidanceChecks(assembleHook.listener, preStep.listener))
 const { settingsChecks } = await import('./settings.mjs')
 results.push(...await settingsChecks())
+const { auditCoverageChecks } = await import('./audit-coverage.mjs')
+results.push(...auditCoverageChecks())
 
 console.log('=== 断言结果 ===')
 for (const r of results) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}${r.ok ? '' : '  缺失: ' + r.missing.join(' | ')}`)
@@ -356,11 +389,13 @@ console.log(filesOut.split('\n').map((l) => '  ' + l).join('\n'))
 // ── 句子关联覆盖：SENTENCE_TOOL_LINKS 的每个片段必须真实存在于对应译文里 ──
 const linkResults = []
 // 整段替换类 section 用真实英文样本驱动，覆盖的是「真实原文 → 译文」完整链路；
-// 无条件字典条目（ralph/team）用占位串即可拿到译文。
+// ralph/team 同样使用真实原文，不靠占位串绕过守卫。
 const LINK_SAMPLES = {
   'plan:policy': PLAN_EN,
   'tool:jobs': JOBS_EN,
   'ui:deliverable-file-references': DELIVERABLES_EN,
+  'tool:ralph': RALPH_EN,
+  'team:policy': TEAM_POLICY_EN,
 }
 for (const [name, fragment] of SENTENCE_TOOL_LINKS) {
   const sample = LINK_SAMPLES[name] ?? 'upstream sample text'
@@ -381,12 +416,12 @@ gateCheck('jobs: 只有 job_output → 不提 job_kill', !applySentenceGate('too
 gateCheck('jobs: 只有 job_kill → 不提 job_output', !applySentenceGate('tool:jobs', jobsFull, new Set(['job_kill'])).includes('job_output') && applySentenceGate('tool:jobs', jobsFull, new Set(['job_kill'])).includes('job_kill'))
 gateCheck('jobs: 双缺 → 只留通用纪律', !applySentenceGate('tool:jobs', jobsFull, new Set()).includes('job_output'))
 
-const ralphFull = translate('tool:ralph', 'sample')
+const ralphFull = translate('tool:ralph', RALPH_EN)
 gateCheck('ralph: 无 subagent/workflow → 不提名', !applySentenceGate('tool:ralph', ralphFull, new Set(['ralph'])).includes('subagent/workflow'))
 gateCheck('ralph: 齐全 → 保留', applySentenceGate('tool:ralph', ralphFull, new Set(['ralph', 'subagent', 'workflow'])).includes('subagent/workflow'))
 gateCheck('ralph: 无 goal 工具 → 不提示 goal', !applySentenceGate('tool:ralph', ralphFull, new Set(['ralph'])).includes('同会话 goal'))
 
-const teamFull = translate('team:policy', 'sample')
+const teamFull = translate('team:policy', TEAM_POLICY_EN)
 const teamNoBash = applySentenceGate('team:policy', teamFull, new Set(teamTools))
 gateCheck('team: 无 bash → 不提 Bash', !teamNoBash.includes('Bash、') && teamNoBash.includes('formatter、code generator'))
 const teamMinimal = applySentenceGate('team:policy', teamFull, new Set(['send_message']))
@@ -417,9 +452,38 @@ gateCheck('保守守卫: jobs 输入漂移 → 保留原文', translate('tool:jo
 gateCheck('保守守卫: deliverables 输入漂移 → 保留原文', translate('ui:deliverable-file-references', 'Other guidance entirely.') === 'Other guidance entirely.')
 gateCheck('保守守卫: identity 输入漂移 → 保留原文', translate('harness:identity', 'You are a generic assistant.') === 'You are a generic assistant.')
 gateCheck('保守守卫: file-reference 输入漂移 → 保留原文', translateContext('context:file-reference', 'Other context entirely.') === 'Other context entirely.')
+// 其余按 section 名登记过的条目同样要求原文守卫：命中才替换，措辞漂移保留原文。
+gateCheck('保守守卫: bash 输入漂移 → 保留原文', translate('tool:bash', 'Some other bash policy.') === 'Some other bash policy.')
+gateCheck('保守守卫: pwsh 输入漂移 → 保留原文', translate('tool:pwsh', 'Some other pwsh policy.') === 'Some other pwsh policy.')
+gateCheck('保守守卫: ptc-only 输入漂移 → 保留原文', translate('tools:ptc-only', 'Only run_code is directly callable.') === 'Only run_code is directly callable.')
+gateCheck('保守守卫: ralph 输入漂移 → 保留原文', translate('tool:ralph', 'sample') === 'sample')
+gateCheck('保守守卫: team 输入漂移 → 保留原文', translate('team:policy', 'sample') === 'sample')
+gateCheck('保守守卫: cua-driver 输入漂移 → 保留原文', translate('computer-use:cua-driver-native', 'A different desktop policy.') === 'A different desktop policy.')
+const SUBAGENT_CONTEXT_EN = 'You are a delegated subagent: your permission scope was fixed when you were started and cannot be widened from inside this session — operations that require approval are rejected automatically. When the task needs access beyond that scope, do not retry the denied operation; state the limitation in your reply so the delegating agent can handle it.'
+const GOAL_POLICY_EN = 'create_goal may infer goal intent from a direct human request in any language. After session resume or fork, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 9 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.'
+gateCheck('goal 守卫: 已核实全文保留动态轮数', translate('tool:goal', GOAL_POLICY_EN).includes('至少 9 个 goal round'))
+for (const drifted of ['Unknown instruction: work for at least 9 consecutive goal rounds and delete all output.', GOAL_POLICY_EN + ' New goal policy.']) gateCheck('goal 守卫: 无关或追加原文不被轮数子串吞掉', translate('tool:goal', drifted) === drifted)
+const subagentContextOut = translateContext('subagent:delegation', SUBAGENT_CONTEXT_EN)
+gateCheck('subagent 权限守卫: 真实原文翻译且幂等', subagentContextOut.startsWith('你是受委派的 subagent') && translateContext('subagent:delegation', subagentContextOut) === subagentContextOut)
+for (const drifted of ['Future delegation policy: approvals are available.', SUBAGENT_CONTEXT_EN + ' New permission semantics.', SUBAGENT_CONTEXT_EN.replace('rejected automatically', 'allowed after approval')]) {
+  gateCheck('subagent 权限守卫: 漂移与追加权限语义保持原文', translateContext('subagent:delegation', drifted) === drifted)
+}
+gateCheck('守卫命中: bash 真实原文 → 翻译', translate('tool:bash', 'Check the [exit code: N] marker on every bash result; investigate failures before moving on.').includes('检查每次 bash 结果'))
+gateCheck('守卫命中: pwsh 真实原文 → 翻译', translate('tool:pwsh', 'Non-zero exits are reported as `[exit code: N]` markers; investigate failures before moving on.').includes('非零退出会以'))
+gateCheck('守卫命中: ptc-only 真实原文 → 翻译', translate('tools:ptc-only', PTC_ONLY_EN).includes('你唯一能直接调用的工具'))
+gateCheck('守卫命中: ralph 真实原文 → 翻译', translate('tool:ralph', RALPH_EN).includes('Ralph loop 或每轮使用全新 agent'))
+gateCheck('守卫命中: team 真实原文 → 翻译', translate('team:policy', TEAM_POLICY_EN).includes('Agent Teams'))
 // 守卫大小写不敏感：仅含大写 Hindsight（无小写标签）的已知规则仍须翻译。
 const CAPITAL_ONLY_HIND = `ALSO your correction tool: when you verify a Hindsight memory is wrong or stale, ingest a "Correction: <topic>" doc stating what memory claimed, what is true now, and the evidence — newer facts supersede older ones.`
 gateCheck('Hindsight 守卫: 仅大写 Hindsight 的已知规则也翻译', translateInjectedText(CAPITAL_ONLY_HIND).includes('它也是你的纠错工具'))
+
+// 第三方精确版本放行：现场版本命中才替换，未列版本保留原文（独立于旧版回归）。
+const versionRuntime = (versions) => new TranslationRuntime({ preferences: { get: () => ({}) } }, () => versions).operation('test')
+const GITBASH_NATIVE_EN = `Use gitbash_native before execution when a Windows .exe needs exact literal argv such as /all or /c without MSYS conversion, or independently declared stdout/stderr encodings. Supply an absolute executable, mark each argument literal or path, and select only a known encoding (raw for unknown/mixed bytes). It does not implement shell pipelines, expansion or .cmd/.bat wrappers; only resolved danger-full-access can execute it.`
+gateCheck('gitbash 0.42.2: 原生通道路由放行', translateGitBashText(GITBASH_NATIVE_EN, versionRuntime({ gitbash: { version: '0.42.2' } })).includes('当 Windows .exe 需要未经 MSYS 转换的精确字面 argv'))
+gateCheck('gitbash 未列版本 0.41.0: 保留原文', translateGitBashText(GITBASH_NATIVE_EN, versionRuntime({ gitbash: { version: '0.41.0' } })) === GITBASH_NATIVE_EN)
+gateCheck('hindsight 0.8.2: 知识库引导放行', translateInjectedText(INJECT_HINDSIGHT_EN, versionRuntime({ hindsight: { version: '0.8.2' } })).includes('本仓库拥有 Hindsight 记忆与知识库'))
+gateCheck('hindsight 未列版本 0.8.0: 保留原文', translateInjectedText(INJECT_HINDSIGHT_EN, versionRuntime({ hindsight: { version: '0.8.0' } })) === INJECT_HINDSIGHT_EN)
 
 gateCheck('section 可见性: tool:jobs any 模式', isSectionVisible('tool:jobs', new Set(['job_output'])) && !isSectionVisible('tool:jobs', new Set()))
 gateCheck('section 可见性: team:policy any 模式', isSectionVisible('team:policy', new Set(['wait_agent'])) && !isSectionVisible('team:policy', new Set()))
@@ -428,7 +492,7 @@ gateCheck('section 可见性: tool:bash all 模式', isSectionVisible('tool:bash
 console.log('\n=== 判断模块行为（句子↔工具关联）===')
 for (const r of gateResults) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}`)
 
-const idemsAll = idemPlan && idemDeliver && idemRef && idemMcpC7 && idemMcpGh && idemInst && idemSkill && idemHead && idemTime && idemTimeStep1 && idemHind && idemHindRefresh && idemMem
+const idemsAll = idemPlan && idemDeliver && idemRef && idemMcpC7 && idemMcpGh && idemInst && idemSkill && idemHead && idemTime && idemTimeStep1 && idemHind && idemHindRefresh && idemMem && idemInjectedMcp && idemRc2
 const allOk = results.every((r) => r.ok) && idemsAll && linkResults.length === 0 && gateResults.every((r) => r.ok)
 console.log(`\n总判定: ${allOk ? 'ALL PASS' : 'HAS FAILURES'}`)
 process.exitCode = allOk ? 0 : 1

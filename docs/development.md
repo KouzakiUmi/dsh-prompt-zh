@@ -1,6 +1,6 @@
 # 开发与验证
 
-[返回主页](../README.md) · [覆盖范围](compatibility.md) · [更新记录](../CHANGELOG.md)
+[返回主页](../README.md) · [覆盖范围](compatibility.md) · [本轮报告](audit-report.md) · [更新记录](../CHANGELOG.md)
 
 ## 模块结构
 
@@ -20,6 +20,7 @@
 | `tests/fixtures/` | 本轮实际收到的 Blender 原文与已核实的 Git Bash 新旧分支样本 |
 | `tests/host-smoke.mjs` | 可选的真实宿主隔离验证 |
 | `scripts/check-manifest.mjs` | 清单、导出目标、patch 与发布字段校验 |
+| `scripts/audit-coverage.mjs` | 只读巡检最近一次会话：列出仍为英文的提示词段、可归因规则与已知边界（`--strict` 有未归因项时失败） |
 | `scripts/prepare-release.mjs` | 检查 npm pack 文件清单，并复制固定名称的 Release 资产 |
 
 Host 为 JavaScript ESM；Client 是直接注册惰性 CommonJS 工厂的 JavaScript，无转译／构建步骤。React 由宿主提供，不打包第二份 React。可选的 `@deepseek-ai/schemastery` peer 用于原生 volatile 保存表单；未解析时不假装具备保存能力。Node.js `>=18`。修改前核对目标宿主实际导出的契约，不把通用 Cordis 或最新版文档直接套到旧宿主。
@@ -49,6 +50,24 @@ node scripts/market-alignment-check.mjs
 
 源码是 JavaScript，语法检查使用 `node --check`；没有 TypeScript 构建配置，不额外安装编译器来虚构类型检查结果。
 
+## 会话覆盖巡检
+
+在源码仓库中使用 [巡检脚本](<../scripts/audit-coverage.mjs>)，优先显式指定一份受信任的本地会话：
+
+```sh
+npm run audit:coverage -- --session "path/to/session.v4.jsonl.zstd"
+node scripts/audit-coverage.mjs --session "path/to/session.v4.jsonl" --json --strict
+```
+
+- 未指定 `--session` 时，从当前用户的 DSH 会话目录中选最近修改的 JSONL／压缩 JSONL，**不限当前工作区**。系统提示词取记录中的最后一份快照，注入消息检查该文件中的全部记录。
+- `--plugin` 指定受信任的插件源码目录，默认当前目录；脚本会导入并执行其中的翻译模块。`--profile` 仅用于读取 Git Bash／Hindsight 包版本，默认 `desktop`，不读取已保存组件开关或自定义译文。报告是默认配置下的离线回放，不代表正在运行的插件副本已生效。
+- 普通 JSONL 支持 Node 18+；压缩文件需 Node 的 zstd API（22.15+）。按 [RFC 8878 标准帧结构](<https://www.rfc-editor.org/rfc/rfc8878.html#section-3.1.1>)解析边界，再交给 zlib 解压；不按内容中的魔数切帧。非标准或不支持的帧、截断帧和不完整 JSON 会明确失败，不静默丢弃记录。
+- 退出码：`0` 表示成功生成报告，`--strict` 下发现待核对项返回 `1`，输入或执行错误返回 `2`；`--json` 不改变这些规则。
+- 这是**启发式归因，不是全文覆盖率**：识别独立英文行，不完整理解同行中英混排、短词、代码、产品名和自然语言。section 归因是近似回放；版本未放行不算命中。回放只替换一部分时仍核对残留，保留命中归因但不把整段判为覆盖。Hindsight 包装与记忆正文分开核查，不能把未放行的已知包装当作正文豁免。其他已知边界单列，`source.kind=user` 的用户请求不计为插件注入。
+- 输出含会话路径和短文本摘要，仅适合本地查看；对外分享前应脱敏，不上传完整生产会话。
+
+[巡检回归](<../tests/audit-coverage.mjs>)纳入 `npm test`；压缩相关断言在缺少 zstd API 时显式标记跳过。
+
 ## 真实宿主契约验证
 
 ```powershell
@@ -61,7 +80,7 @@ node tests/host-smoke.mjs "<宿主 app 根目录>"
 
 - 插件真实加载，已知身份与新版多工具委派规则进入中文组装结果。
 - 通用工具 description 与参数 schema 保持原文；已知 Git Bash 附加指导在内层／外层两种 before-next 注册顺序下均翻译。
-- Blender 译表仍有纯函数全文覆盖；严格运行时门控下未核验服务器版本保持原文。已核验 Git Bash context 进入中文组装结果后仍会被 `refreshContext` 覆盖，明确验证未解决边界。
+- Blender 译表有纯函数全文覆盖；已知 MCP 服务器无需版本证明，按原文守卫翻译，未知服务器不套用其他服务器的译表。已核验 Git Bash context 进入中文组装结果后仍会被 `refreshContext` 覆盖，明确验证未解决边界。
 - 插件先加载、preset 后注册时，旧全局接线漏译；初始化后的作用域接线修复该顺序。
 - 已有／新建 agent、真实时间插件、缺省／已知时区、子作用域路由与冻结消息。
 - `agents` 卸载／恢复、插件卸载时，对外部 `agent.ctx` 监听器的清理。

@@ -90,7 +90,7 @@ try {
   await identity.waitFor();
   assert.equal(await identity.inputValue(), '你是由 DeepSeek Harness 驱动的 AI agent。');
   const version = await page.evaluate(() => window.testReact.version);
-  console.log('PASS browser: 实际宿主前端 React', version, '226 条目／原生页面组件已挂载');
+  console.log('PASS browser: 实际宿主前端 React', version, metadata.entries.length, '条目／原生页面组件已挂载');
   await identity.fill('隔离浏览器保存的实际译文。');
   await page.getByRole('button', { name: '保存到当前 Profile', exact: true }).click();
   await page.getByText('已保存到当前 Profile；', { exact: false }).waitFor();

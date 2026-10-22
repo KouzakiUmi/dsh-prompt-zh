@@ -28,6 +28,11 @@ if (!dsh.bundle || !dsh.bundle.patch) fail('缺少 dsh.bundle.patch');
 else if (!existsSync(join(root, dsh.bundle.patch))) fail('dsh.bundle.patch 指向的文件不存在: ' + dsh.bundle.patch);
 else ok('dsh.bundle.patch -> ' + dsh.bundle.patch);
 
+const supported = Object.entries(dsh.compatibility?.dshReleases || {}).filter(([, state]) => state === 'compatible').map(([version]) => version).sort();
+if (!supported.length || pkg.engines?.dsh !== supported.join(' || ') || dsh.compatibility?.dsh !== pkg.engines?.dsh) {
+  fail('engines.dsh / compatibility.dsh 必须与已核验精确版本列表一致');
+} else ok('DSH 范围与精确版本兼容声明一致');
+
 const peer = pkg.peerDependencies || {};
 const corePeers = Object.keys(peer).filter((k) => k.startsWith('@deepseek-ai/'));
 const coreDeps = Object.keys(pkg.dependencies || {}).filter((k) => k.startsWith('@deepseek-ai/'));

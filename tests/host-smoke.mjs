@@ -77,7 +77,11 @@ assert.ok(assembly.contexts[0].text.startsWith('当前 DSH 文件策略'));
 assert.ok(hostPrompt.refreshContext(assembly, { scope: a }).contexts[0].text.startsWith('Current DSH file policy'));
 console.log('PASS host: 插件真实加载/assemble 委派规则/工具 schema 不变/refreshContext 边界');
 const checkNewGuidance = (value) => {
-  assert.equal(value.sections.find((section) => section.name === 'mcp:blender').text, blenderEnglish);
+  // MCP 已知 server 在服务器版本不可核验时仍按原文守卫翻译；未命中的原文保留英文。
+  const blender = value.sections.find((section) => section.name === 'mcp:blender').text;
+  assert.notEqual(blender, blenderEnglish);
+  assert.ok(blender.includes('### MCP 服务器：blender'));
+  assert.ok(blender.includes('Blender 必须处于运行状态'));
   assert.ok(value.contexts.find((context) => context.name === 'gitbash-shell:posix-paths').text.startsWith('当前工作 shell'));
   const bash = value.tools.find((tool) => tool.name === 'bash');
   assert.ok(bash.description.startsWith(bashBase));

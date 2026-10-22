@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { apply, getRules, translate, translateContext, translateMessages, translateGitBashText } from '../lib/index.js';
+import { apply, getRules, translate, translateContext, translateMessages, translateGitBashText, translateMcp, translateAllMcp } from '../lib/index.js';
 import { TranslationRuntime, COMPONENTS, normalizePreferences } from '../lib/rules.js';
 import { createConfigSchema, versionResolver, installSettingsHost } from '../lib/settings-host.js';
 import { gitbashSamples } from './new-guidance.mjs';
@@ -30,6 +30,8 @@ export async function settingsChecks() {
   check('settings: Core 兼容清单与各核心译文版本元数据保持一致', () => {
     const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
     const compatible = Object.entries(manifest.dsh.compatibility.dshReleases).filter(([, state]) => state === 'compatible').map(([version]) => version).sort();
+    assert.deepEqual(manifest.engines.dsh.split(' || ').sort(), compatible, 'DSH STORE 范围与精确验收声明必须一致');
+    assert.equal(manifest.dsh.compatibility.dsh, manifest.engines.dsh);
     for (const component of COMPONENTS.filter((item) => !item.thirdParty)) {
       assert.deepEqual([...component.versions].sort(), compatible, component.id);
       for (const row of rows.filter((item) => item.component === component.id)) assert.deepEqual([...row.versions].sort(), compatible, row.id);
@@ -51,13 +53,51 @@ export async function settingsChecks() {
     assert.ok(diagnostic.entries.find((row) => row.id === identity.id).metrics.replaced > 0);
     assert.ok(!JSON.stringify(diagnostic).includes('PRIVATE_TIMESTAMP'));
   });
-  check('settings: 严格精确版本、不借相邻版本或 MCP 客户端版本', () => {
+  check('settings: 严格精确版本；MCP 已知 server 按原文守卫放行、未知 server 不放行', () => {
     versions = { gitbash: { version: '0.39.5' } };
     assert.equal(translateGitBashText(gitbashSamples[0].text, runtime.operation('test')), gitbashSamples[0].text);
     assert.equal(runtime.describe().components.find((component) => component.id === 'gitbash').versionStatus, 'mismatch');
+    // 服务器版本仍不可核验（不借 MCP 客户端版本），但已知 server 的守卫式译文照常执行。
     assert.equal(runtime.describe().components.find((component) => component.id === 'mcp.blender').versionStatus, 'unavailable');
-    assert.ok(!runtime.describe().entries.find((row) => row.component === 'mcp.blender').active);
-    assert.ok(runtime.describe().entries.every((row) => row.metrics.replaced === 0));
+    assert.ok(runtime.describe().entries.find((row) => row.component === 'mcp.blender').active);
+    assert.ok(!runtime.describe().entries.find((row) => row.component === 'mcp.other').active);
+    const operation = runtime.operation('test');
+    const blenderBlock = '### MCP server: blender\n\nThe `execute_blender_code` tool is a last resort, if there are other tools that provide the functionality you need, use those instead.';
+    assert.ok(translateMcp('mcp:blender', blenderBlock, operation).includes('仅作为最后手段'));
+    // 未知 server 的标题与正文保持原文，不猜译。
+    const unknown = '### MCP server: unknown-server\n\nDo something custom.';
+    assert.equal(translateMcp('mcp:unknown-server', unknown, operation), unknown);
+  });
+  check('mcp: 全文与注入回放均不跨服务器边界，关闭组件仍保留原文', () => {
+    const sentence = 'The GitHub MCP Server provides tools to interact with GitHub platform.';
+    const body = `Tool selection guidance:\n\n${sentence}`;
+    const unknown = `### MCP server: unknown-server\n\n${body}`;
+    const known = `### MCP server: github\n\n${body}`;
+    const otherKnown = `### MCP server: context7\n\n${body}`;
+    const combined = `${unknown}\n\n${known}\n\n${otherKnown}`;
+    const operation = new TranslationRuntime().operation('test');
+    assert.equal(translateAllMcp(unknown, operation), unknown);
+    assert.equal(translateMcp('mcp:github', unknown, operation), unknown);
+    const output = translateAllMcp(combined, operation);
+    assert.ok(output.startsWith(unknown));
+    assert.ok(output.includes('GitHub MCP 服务器提供与 GitHub 平台交互的工具'));
+    assert.ok(output.endsWith(`### MCP 服务器：context7\n\n${body}`));
+    assert.equal(translateAllMcp(output, operation), output);
+    assert.equal(translateMessages([{ content: combined }], operation)[0].content, output);
+    const disabled = new TranslationRuntime({ preferences: { disabledComponents: ['mcp.github'] } }).operation('test');
+    assert.equal(translateAllMcp(known, disabled), known);
+    assert.equal(translateAllMcp(combined.replaceAll('\n', '\r\n'), operation).replaceAll('\r\n', '\n'), output);
+  });
+  check('blender: 已中文化标题重入不虚增输出改变计数', () => {
+    const observed = new TranslationRuntime();
+    const original = '### MCP server: blender\n\nYou have access to Blender tools to interact with a Blender scene directly.';
+    const localized = translateMcp('mcp:blender', original, observed.operation('assemble'));
+    const before = observed.describe().entries.find((row) => row.component === 'mcp.blender' && row.source === '### MCP server: blender').metrics.replaced;
+    assert.equal(before, 1);
+    assert.equal(translateAllMcp(localized, observed.operation('pre-step')), localized);
+    const after = observed.describe().entries.find((row) => row.component === 'mcp.blender' && row.source === '### MCP server: blender').metrics;
+    assert.equal(after.replaced, before);
+    assert.equal(after.stages['pre-step'].replaced, 0);
   });
   check('settings: 组件关闭原文透传、再次开启读取新值', () => {
     preferences = { disabledComponents: ['core', 'time'], overrides: { [identity.id]: '新的实际译文。' } };
@@ -88,6 +128,17 @@ export async function settingsChecks() {
     assert.equal(result.gitbash.version, '0.39.4');
     assert.equal(result.hindsight.status, 'unavailable');
     assert.ok(!JSON.stringify(result).includes('PRIVATE_PATH'));
+  });
+  check('settings: rc.2 无 Profile manifest 方法时回退 pluginPackages 精确解析', () => {
+    const lookedUp = [];
+    const fake = { get: (name) => name === 'profileContext' ? {} : name === 'pluginPackages' ? {
+      packageOf: (name, from) => { lookedUp.push(name); assert.ok(from.endsWith('/lib/settings-host.js')); return { manifestPath: name }; }
+    } : undefined };
+    const resolved = versionResolver(fake, (name) => ({ name, version: name === 'dsh-gitbash-shell' ? '0.42.2' : name === '@vectorize-io/hindsight-coding-agents' ? '0.8.2' : '0.2.1-rc.2' }))();
+    assert.equal(resolved.gitbash.version, '0.42.2');
+    assert.equal(resolved.hindsight.version, '0.8.2');
+    assert.equal(resolved.core.version, '0.2.1-rc.2');
+    assert.equal(lookedUp.filter((name) => name === '@deepseek-ai/dsh-system-prompt').length, 1);
   });
   const routes = [], callbacks = new Map();
   const own = { Config: { toJSON: () => ({}) } };
@@ -121,6 +172,38 @@ export async function settingsChecks() {
     assert.equal(metrics.matched, 2);
     assert.equal(metrics.stages.assemble.matched, 1);
     assert.equal(metrics.stages['pre-step'].matched, 1);
+  });
+  // 用户只改自然语言措辞，也不能让内置句子裁剪失效；保存值不迁移、不丢弃。
+  const customJobs = '处理任务后，不再需要的任务请用 job_kill 取消。';
+  const customPlan = '自定义计划中禁止 todo_write。';
+  const protectedPreferences = { overrides: { 'core:tool:jobs': customJobs, 'core:plan-paragraph-3': customPlan, [identity.id]: '其他自定义条目不受影响。' } };
+  let assemble, statusRoute;
+  apply({
+    get: () => undefined,
+    on: (event, listener) => { if (event === 'system-prompt/assemble') assemble = listener; },
+    inject: (keys, callback) => {
+      if (keys[0] === 'connection') callback({ connection: { fetch: { register: (route) => { statusRoute = route; return () => {}; } } }, effect: (setup) => setup() });
+    }
+  }, { preferences: protectedPreferences });
+  const sourceSections = [
+    { name: 'tool:jobs', text: 'Track every background job id you start.' },
+    { name: 'plan:policy', text: 'The tool catalog stays the same across modes for request-cache stability.' },
+    { name: 'harness:identity', text: 'You are an AI agent powered by DeepSeek Harness.' }
+  ];
+  const protectedAssembly = await assemble({}, {}, async () => ({ sections: sourceSections, contexts: [], tools: [{ name: 'job_output' }] }));
+  const protectedStatus = await (await statusRoute.fetch()).json();
+  check('settings: 自定义措辞在缺工具时回退内置再裁剪，保留保存值和独立覆盖', () => {
+    assert.ok(!protectedAssembly.sections.find((row) => row.name === 'tool:jobs').text.includes('job_kill'));
+    assert.ok(!protectedAssembly.sections.find((row) => row.name === 'plan:policy').text.includes('todo_write'));
+    assert.equal(protectedAssembly.sections.find((row) => row.name === 'harness:identity').text, '其他自定义条目不受影响。');
+    assert.equal(protectedPreferences.overrides['core:tool:jobs'], customJobs);
+    assert.equal(protectedStatus.entries.find((row) => row.id === 'core:tool:jobs').metrics.defaulted, 1);
+    assert.equal(protectedStatus.entries.find((row) => row.id === 'core:plan-paragraph-3').metrics.stages.assemble.defaulted, 1);
+  });
+  const fullAssembly = await assemble({}, {}, async () => ({ sections: sourceSections, contexts: [], tools: ['job_output', 'job_kill', 'todo_write', 'ask_user_question'].map((name) => ({ name })) }));
+  check('settings: 工具齐全后继续使用原自定义译文，不改条目 ID', () => {
+    assert.equal(fullAssembly.sections.find((row) => row.name === 'tool:jobs').text, customJobs);
+    assert.equal(fullAssembly.sections.find((row) => row.name === 'plan:policy').text, customPlan);
   });
   const client = loadClient();
   const controller = client.createDraftController();
