@@ -256,10 +256,10 @@ results.push({ label: 'translateMessages', ok: msgCheck, missing: [] })
 // 复刻宿主瀑布：listener(payload, next)，next() 返回内层决策。
 const registrations = []
 const fakeCtx = {
-  get: (name) => name === 'profileContext' ? {
-    resolvePackageManifest: (packageName) => packageName === 'dsh-gitbash-shell'
-      ? new URL('./fixtures/package-meta/gitbash/package.json', import.meta.url)
-      : packageName === '@vectorize-io/hindsight-coding-agents' ? new URL('./fixtures/package-meta/hindsight/package.json', import.meta.url) : undefined
+  get: (name) => name === 'pluginPackages' ? {
+    packageOf: (packageName) => packageName === 'dsh-gitbash-shell'
+      ? { name: packageName, version: '0.39.4' }
+      : packageName === '@vectorize-io/hindsight-coding-agents' ? { name: packageName, version: '0.8.1' } : undefined
   } : undefined,
   on: (event, listener, options) => registrations.push({ event, listener, options }),
   inject: () => {} // 本段只验证全局兜底；动态依赖与作用域接线由 lifecycle.mjs 验证。

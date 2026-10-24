@@ -121,20 +121,35 @@ export async function settingsChecks() {
     assert.equal(translateContext('sandbox:policy', 'Current DSH file policy: danger-full-access.', runtime.operation('assemble')), '自定义文件策略译文。');
     assert.ok(!JSON.stringify(runtime.describe()).includes('finalRequestEffective'));
   });
-  check('settings: 版本解析拒绝不变成“未安装”，只读公开来源', () => {
-    const fake = { get: (name) => name === 'profileContext' ? { resolvePackageManifest: (name) => name } : undefined };
-    const resolve = versionResolver(fake, (name) => { if (name === 'dsh-gitbash-shell') return { name, version: '0.39.4' }; throw new Error('EACCES PRIVATE_PATH'); });
+  check('settings: 版本解析失败不变成“未安装”，也不泄漏异常', () => {
+    const fake = { get: () => undefined };
+    const resolve = versionResolver(fake, () => { throw new Error('EACCES PRIVATE_PATH'); });
     const result = resolve();
-    assert.equal(result.gitbash.version, '0.39.4');
+    assert.equal(result.gitbash.status, 'unavailable');
     assert.equal(result.hindsight.status, 'unavailable');
     assert.ok(!JSON.stringify(result).includes('PRIVATE_PATH'));
   });
-  check('settings: rc.2 无 Profile manifest 方法时回退 pluginPackages 精确解析', () => {
+  check('settings: 版本只来自宿主 packageOf 记录，包名不匹配或非 SemVer 一律不可核验', () => {
     const lookedUp = [];
-    const fake = { get: (name) => name === 'profileContext' ? {} : name === 'pluginPackages' ? {
-      packageOf: (name, from) => { lookedUp.push(name); assert.ok(from.endsWith('/lib/settings-host.js')); return { manifestPath: name }; }
+    const fake = { get: (name) => name === 'pluginPackages' ? {
+      packageOf: (name, from) => { lookedUp.push(name); assert.ok(from.endsWith('/lib/settings-host.js'));
+        if (name === 'dsh-gitbash-shell') return { name: 'dsh-gitbash-shell', version: '0.42.2' };
+        if (name === '@vectorize-io/hindsight-coding-agents') return { name: 'dsh-gitbash-shell', version: '9.9.9' };
+        return { name, version: 'not-a-version' }; }
     } : undefined };
-    const resolved = versionResolver(fake, (name) => ({ name, version: name === 'dsh-gitbash-shell' ? '0.42.2' : name === '@vectorize-io/hindsight-coding-agents' ? '0.8.2' : '0.2.1-rc.2' }))();
+    const resolved = versionResolver(fake)();
+    assert.equal(resolved.gitbash.version, '0.42.2');
+    assert.equal(resolved.hindsight.status, 'unavailable');
+    assert.equal(resolved.core.status, 'unavailable');
+    assert.equal(lookedUp.filter((name) => name === '@deepseek-ai/dsh-system-prompt').length, 1);
+  });
+  check('settings: 宿主解析出合法版本时按记录放行并按名字缓存', () => {
+    const lookedUp = [];
+    const fake = { get: (name) => name === 'pluginPackages' ? {
+      packageOf: (name, from) => { lookedUp.push(name); assert.ok(from.endsWith('/lib/settings-host.js'));
+        return { name, version: name === 'dsh-gitbash-shell' ? '0.42.2' : name === '@vectorize-io/hindsight-coding-agents' ? '0.8.2' : '0.2.1-rc.2' }; }
+    } : undefined };
+    const resolved = versionResolver(fake)();
     assert.equal(resolved.gitbash.version, '0.42.2');
     assert.equal(resolved.hindsight.version, '0.8.2');
     assert.equal(resolved.core.version, '0.2.1-rc.2');

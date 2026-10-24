@@ -6,7 +6,7 @@
 
 ## 未发布
 
-暂无。
+- 版本解析改用宿主 `pluginPackages.packageOf` 已解析记录的 `name`/`version`，运行时不再读取任何文件；旧的 `profileContext.resolvePackageManifest` 路径在已声明的全部核心版本（alpha.2/alpha.3/rc.2）宿主中并不存在，测试桩同步改为 `pluginPackages` 并删除孤儿 package-meta fixture。
 
 ## 1.3.2 — 2026-10-23
 

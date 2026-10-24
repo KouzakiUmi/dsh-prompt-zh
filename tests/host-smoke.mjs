@@ -1,6 +1,7 @@
 // 可选：使用指定宿主实际导出的 Cordis / scope 契约做纯内存验证。
 // 不加载 profile、凭据或真实 provider；不启动服务，不写宿主目录。
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -27,16 +28,22 @@ class TestAgents extends Service {
 const { SystemPrompt } = await load('@deepseek-ai/dsh-system-prompt');
 const promptService = ctx.plugin(SystemPrompt, {});
 await promptService;
-class TestProfile extends Service {
-  constructor(owner) { super(owner, 'profileContext'); }
-  resolvePackageManifest(name) {
-    if (name === 'dsh-gitbash-shell') return new URL('./fixtures/package-meta/gitbash/package.json', import.meta.url);
-    if (name === '@vectorize-io/hindsight-coding-agents') return new URL('./fixtures/package-meta/hindsight/package.json', import.meta.url);
-    return name.startsWith('@deepseek-ai/') ? requireHost.resolve(`${name}/package.json`) : undefined;
+class TestPackages extends Service {
+  constructor(owner) { super(owner, 'pluginPackages'); }
+  packageOf(name) {
+    if (name === 'dsh-gitbash-shell') return { name, version: '0.39.4' };
+    if (name === '@vectorize-io/hindsight-coding-agents') return { name, version: '0.8.1' };
+    if (!name.startsWith('@deepseek-ai/')) return undefined;
+    try {
+      const manifest = JSON.parse(readFileSync(requireHost.resolve(`${name}/package.json`), 'utf8'));
+      return { name: manifest.name, version: manifest.version };
+    } catch {
+      return undefined;
+    }
   }
 }
-const profileStub = ctx.plugin((owner) => { new TestProfile(owner); });
-await profileStub;
+const packagesStub = ctx.plugin((owner) => { new TestPackages(owner); });
+await packagesStub;
 const localization = ctx.plugin(promptZh);
 await localization;
 const a = {};
@@ -183,6 +190,6 @@ disposePreset();
 await aScope.dispose();
 await bScope.dispose();
 await restoredRegistry.dispose();
-await profileStub.dispose();
+await packagesStub.dispose();
 await promptService.dispose();
 console.log('host smoke: ALL PASS');
