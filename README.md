@@ -28,7 +28,7 @@ DeepSeek Harness 的系统提示词中文化插件。把已知英文规则译成
 | --- | --- |
 | 系统行为指引 | 中文化已知提示词段落，按当前可见工具裁剪相关句子 |
 | MCP 使用规则 | Blender、Context7、GitHub、Playwright、Chrome DevTools 按已知原文守卫翻译，不依赖服务器版本；未知服务器保持原文，不用 MCP 客户端版本冒充 |
-| 运行时提醒 | 处理时间／时区、工作区指令包装、技能目录调用纪律、Hindsight 记忆规则等已知文本 |
+| 运行时提醒 | 处理时间／时区、工作区指令包装、技能目录调用纪律、Hindsight 记忆规则等已知文本；运行时快照中的文件策略、审批、Subagent 委派、实现目录与 Web GUI URL 在宿主刷新重建后仍保留中文（快照标题句与工作目录／团队身份两条 required 上下文仍由宿主生成英文） |
 | Git Bash 附加指导 | 中文化已知 MSYS 路径、shell 路由及 `run_code` 开启／关闭提示；只替换匹配的 Bash description 附加文本 |
 | 工具调用契约 | 保留工具名、参数 schema、代码和动态值；通用 description 及未知附加内容保持原文 |
 
@@ -54,7 +54,7 @@ Browser time zone for this request: unavailable. Ask the user to clarify otherwi
 
 运行时翻译保留全局兜底，并在 agent 初始化完成后注册本 agent 的作用域监听器，覆盖随后由 preset 挂载的时间等注入；对已经存在的 agent 回补，并随 agent、依赖或插件卸载清理。
 
-1.3.3 延续逐条译文设置页，并适配已核验的 Core 0.2.1-rc.3（保留 alpha.2／alpha.3／rc.2 兼容声明）、Git Bash 0.42.2 与 Hindsight 0.8.2；版本发布状态以 GitHub Release 与 npm registry 为准，安装后仍需在目标 Profile 验收。Git Bash、Hindsight 仅在当前解析包版本与条目已核验精确版本一致时翻译，未知或不符版本保留原文；已知 MCP server 独立按原文守卫执行。Git Bash context 在组装时可以有译文，但当前 Core 的后续 `refreshContext` 仍可能恢复来源英文；补译文不等于改变宿主的最终快照生成。
+1.3.4 修复运行时上下文快照被宿主刷新重建覆盖的问题，并放行已逐条核验的 Git Bash 0.43.2（保留 0.39.0／0.39.4／0.42.2 与 Core 0.2.1-rc.3 基线）、Hindsight 0.8.2；版本发布状态以 GitHub Release 与 npm registry 为准，安装后仍需在目标 Profile 验收。Git Bash、Hindsight 仅在当前解析包版本与条目已核验精确版本一致时翻译，未知或不符版本保留原文；已知 MCP server 独立按原文守卫执行。运行时上下文经 assemble 中文化后改挂插件自有条目，宿主 `refreshContext` 重建时仍保留中文；快照标题句与两条 required 上下文（工作目录、团队身份）仍由宿主生成英文。
 
 ## 逐条编辑译文
 
@@ -116,7 +116,7 @@ dsh plugin --profile web add "<tarball 的绝对路径>"
 | [兼容性与覆盖范围](docs/compatibility.md) | 能翻译什么、英文残留原因、已验证环境与权限边界 |
 | [开发与验证](docs/development.md) | 模块结构、离线测试、真实宿主验证、打包与发布流程 |
 | [本轮适配与加固报告](docs/audit-report.md) | 本轮改动、真实会话巡检结果、验证证据与待决事项 |
-| [更新记录](CHANGELOG.md) | 1.3.3 兼容 Core rc.3、1.3.2 修复内容与已核实的历史里程碑 |
+| [更新记录](CHANGELOG.md) | 1.3.4 运行时快照修复与 Git Bash 0.43.2 放行、1.3.3 兼容 Core rc.3 与已核实的历史里程碑 |
 | [展示资源说明](assets/README.md) | 横幅的事实来源、字体引用与文档素材约定 |
 
 ---

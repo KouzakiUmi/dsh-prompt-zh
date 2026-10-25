@@ -6,7 +6,7 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `lib/index.js` | 静态组装监听、section／context 翻译、句子级工具裁剪、网络／文件／委派策略；导出纯函数 |
+| `lib/index.js` | 静态组装监听、section／context 翻译（含让译文在宿主 `refreshContext` 重建后保留的条目改名）、句子级工具裁剪、网络／文件／委派策略；导出纯函数 |
 | `lib/lifecycle.js` | 全局与 agent 作用域消息翻译接线、动态 `agents` 依赖、外部监听 disposer 的所有权 |
 | `lib/injections.js` | 工作区指令、技能目录、时间／时区、Hindsight 等已知注入片段；消息安全浅拷贝 |
 | `lib/mcp.js` / `lib/blender.js` | MCP 服务器指导说明的识别与中文化；Blender 规则按区块隔离、容忍折行，不猜译未知段落 |
@@ -80,7 +80,7 @@ node tests/host-smoke.mjs "<宿主 app 根目录>"
 
 - 插件真实加载，已知身份与新版多工具委派规则进入中文组装结果。
 - 通用工具 description 与参数 schema 保持原文；已知 Git Bash 附加指导在内层／外层两种 before-next 注册顺序下均翻译。
-- Blender 译表有纯函数全文覆盖；已知 MCP 服务器无需版本证明，按原文守卫翻译，未知服务器不套用其他服务器的译表。已核验 Git Bash context 进入中文组装结果后仍会被 `refreshContext` 覆盖，明确验证未解决边界。
+- Blender 译表有纯函数全文覆盖；已知 MCP 服务器无需版本证明，按原文守卫翻译，未知服务器不套用其他服务器的译表。已核验 Git Bash context 与其余运行时上下文在 `refreshContext` 重建后保留中文（条目改挂 `prompt-zh:*` 自有名字），并断言标题句与 required 条目仍为英文的边界。
 - 插件先加载、preset 后注册时，旧全局接线漏译；初始化后的作用域接线修复该顺序。
 - 已有／新建 agent、真实时间插件、缺省／已知时区、子作用域路由与冻结消息。
 - `agents` 卸载／恢复、插件卸载时，对外部 `agent.ctx` 监听器的清理。

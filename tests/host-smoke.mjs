@@ -25,7 +25,7 @@ class TestAgents extends Service {
   constructor(owner) { super(owner, 'agents'); }
   list() { return [...live]; }
 }
-const { SystemPrompt } = await load('@deepseek-ai/dsh-system-prompt');
+const { SystemPrompt, joinContextSections } = await load('@deepseek-ai/dsh-system-prompt');
 const promptService = ctx.plugin(SystemPrompt, {});
 await promptService;
 class TestPackages extends Service {
@@ -60,8 +60,18 @@ scopedPrompt.tools(() => ({ schemas: ['subagent', 'subagent_fork'].map((name) =>
   name, description: 'Schema descriptions intentionally stay English.', parameters: { type: 'object' }
 })) }));
 scopedPrompt.context({
-  name: 'sandbox:policy', order: 0, required: true,
+  // 真实 dsh-sandbox-policy 注册时不带 required，这里保持同形。
+  name: 'sandbox:policy', order: 110,
   text: () => 'Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.'
+});
+// 真实宿主里 required 的运行时上下文只有工作目录与团队身份：插件不能改名，否则被补回英文。
+scopedPrompt.context({
+  name: 'working-directory:current', order: 100, required: true,
+  text: () => 'Current working directory: "C:/workspace".'
+});
+scopedPrompt.context({
+  name: 'harness:source', order: 200, interpolate: false,
+  text: 'Current DeepSeek Harness implementation checkout: "C:/dsh-checkout".'
 });
 scopedPrompt.section({ name: 'mcp:blender', order: 700, text: blenderEnglish });
 scopedPrompt.context({ name: 'gitbash-shell:posix-paths', order: 126, text: () => gitbashSamples[0].text });
@@ -80,16 +90,32 @@ assert.ok(assembly.sections.some((section) => section.name === 'harness:identity
 assert.ok(assembly.sections.some((section) => section.name === 'policy:delegation' && section.text.includes('subagent、subagent_fork')));
 assert.ok(!assembly.sections.some((section) => section.text.includes('Start independent')));
 assert.equal(assembly.tools.find((tool) => tool.name === 'subagent').description, 'Schema descriptions intentionally stay English.');
-assert.ok(assembly.contexts[0].text.startsWith('当前 DSH 文件策略'));
-assert.ok(hostPrompt.refreshContext(assembly, { scope: a }).contexts[0].text.startsWith('Current DSH file policy'));
-console.log('PASS host: 插件真实加载/assemble 委派规则/工具 schema 不变/refreshContext 边界');
+const sandboxOf = (value) => value.contexts.find((context) => context.name.endsWith('sandbox:policy'));
+assert.ok(sandboxOf(assembly).text.startsWith('当前 DSH 文件策略'));
+const refreshed = hostPrompt.refreshContext(assembly, { scope: a });
+// 非 required 的运行时上下文挂到插件自有条目名，宿主 refreshContext 重建后仍是中文。
+assert.equal(sandboxOf(refreshed).name, 'prompt-zh:sandbox:policy');
+assert.ok(sandboxOf(refreshed).text.startsWith('当前 DSH 文件策略'));
+// 边界：required 的工作目录保留原名，refreshContext 仍重建为英文，且不会重复出第二条。
+const directories = refreshed.contexts.filter((context) => context.name === 'working-directory:current');
+assert.equal(directories.length, 1);
+assert.ok(directories[0].text.startsWith('Current working directory'));
+// 实现目录与 Web GUI 的上下文措辞与系统提示 section 不同，单独守卫翻译。
+assert.ok(refreshed.contexts.find((context) => context.name === 'prompt-zh:harness:source').text.startsWith('当前 DeepSeek Harness 实现目录'));
+// 最终快照：宿主拼接的标题句仍是英文常量（已知边界），正文按上下文语言呈现。
+const snapshot = joinContextSections(refreshed.contexts);
+assert.ok(snapshot.startsWith('Current runtime context. This snapshot supersedes earlier runtime-context snapshots.'));
+assert.ok(snapshot.includes('当前 DSH 文件策略'));
+assert.ok(snapshot.includes('当前 DeepSeek Harness 实现目录'));
+assert.ok(snapshot.includes('Current working directory'));
+console.log('PASS host: 插件真实加载/assemble 委派规则/工具 schema 不变/刷新后译文保留与 required 边界');
 const checkNewGuidance = (value) => {
   // MCP 已知 server 在服务器版本不可核验时仍按原文守卫翻译；未命中的原文保留英文。
   const blender = value.sections.find((section) => section.name === 'mcp:blender').text;
   assert.notEqual(blender, blenderEnglish);
   assert.ok(blender.includes('### MCP 服务器：blender'));
   assert.ok(blender.includes('Blender 必须处于运行状态'));
-  assert.ok(value.contexts.find((context) => context.name === 'gitbash-shell:posix-paths').text.startsWith('当前工作 shell'));
+  assert.ok(value.contexts.find((context) => context.name.endsWith('gitbash-shell:posix-paths')).text.startsWith('当前工作 shell'));
   const bash = value.tools.find((tool) => tool.name === 'bash');
   assert.ok(bash.description.startsWith(bashBase));
   assert.ok(bash.description.includes('本机没有 PowerShell 工具'));
@@ -101,8 +127,10 @@ disposeGuidance();
 disposeGuidance = ctx.on('system-prompt/assemble', appendGuidance, { prepend: true });
 checkNewGuidance(await hostPrompt.assemble({ scope: a }));
 disposeGuidance();
-assert.equal(hostPrompt.refreshContext(assembly, { scope: a }).contexts.find((context) => context.name === 'gitbash-shell:posix-paths').text, gitbashSamples[0].text);
-console.log('PASS host: Blender/Git Bash 实际组装/附加说明双顺序/参数保留/刷新覆盖边界');
+const refreshedGitbash = hostPrompt.refreshContext(assembly, { scope: a }).contexts.find((context) => context.name.endsWith('gitbash-shell:posix-paths'));
+assert.equal(refreshedGitbash.name, 'prompt-zh:gitbash-shell:posix-paths');
+assert.ok(refreshedGitbash.text.startsWith('当前工作 shell'));
+console.log('PASS host: Blender/Git Bash 实际组装/附加说明双顺序/参数保留/刷新后译文保留');
 const text = 'Time sampled while preparing turn 2, step 12: 2026-10-12T17:18:04+08:00[Asia/Hong_Kong]\nElapsed since the preceding step context: unavailable.';
 const message = createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'time-context' } });
 const disposePreset = a.ctx.on('agent/pre-step', async (_payload, next) => {

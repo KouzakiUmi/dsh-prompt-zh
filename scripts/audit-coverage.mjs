@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 import zlib from 'node:zlib';
 
 const INJECTION_NOTES = {
-  'runtime-context': '宿主在 pre-step 之后 refreshContext 重算，插件没有合法拦截点',
+  'runtime-context': '快照正文在 assemble 阶段中文化并挂到插件自有条目，宿主 refreshContext 重建后保留；标题句与 required 条目（工作目录、团队身份）仍由宿主生成英文',
   'skill-catalog': '技能摘要和正文按设计不做通用翻译',
   'agent-instructions': '用户自己的指令正文不做通用翻译',
   'compact-checkpoint': '会话压缩摘要由宿主生成，内容是历史对话本身，不属于提示词',

@@ -8,6 +8,15 @@
 
 暂无。
 
+## 1.3.4 — 2026-10-25
+
+- 修复运行时上下文快照在宿主 `refreshContext` 重建后恢复英文：assemble 阶段命中译文的 context 条目改挂 `prompt-zh:*` 自有名字，宿主重建时 `providers.get(name)` 为空，译文保留。覆盖文件策略、审批策略、Subagent 委派、实现目录、Web GUI URL 与 Git Bash POSIX 指导。
+- 新增 `harness:source`、`app:web-surface` 的上下文措辞译文（与同名 section 措辞不同，各自按原文守卫）；冷启动登记同步。
+- 已核实边界：快照标题句由宿主 `joinContextSections` 拼接固定英文常量；`working-directory:current` 与 `team:identity` 为 `required: true`，改名会被宿主按原名补回英文条目并重复出现，因此仍为英文。
+- 核验并放行 `dsh-gitbash-shell 0.43.2`：逐条比对当前 Profile 实际安装副本，11 条原文与既有基线一致；0.42.2 的破折号变体在新版已移除，该条只保留 0.42.2 登记。新增 `tests/fixtures/gitbash-0.43.2.json`，并断言未列版本 `0.43.1` 保留原文。
+- 设置页刷新提示改为重建说明（译文保留、标题与 required 边界）；`context:file-reference` 的覆盖标记按当前宿主形态（系统提示 section）改回 `plugin-stage`；巡检中的 `runtime-context` 边界说明同步。
+- 验证：离线回归新增运行时上下文与 Git Bash 0.43.2 断言；rc.3 解包宿主 host-smoke 增加 `refreshContext` 后译文保留、required 不重复与最终快照断言。已在 desktop Profile 安装本版本（托管 `dsh plugin add` 因宿主 CLI 的 crashpad 崩溃不可用，改用随包 node 驱动同一 pnpm 完成，spec 暂为本地 tarball 的 file:）；重启宿主后的界面验收与模型调用验收未做。
+
 ## 1.3.3 — 2026-10-25
 
 - 复核官方 DeepSeek Harness 桌面安装包 `0.2.1-rc.3`（随包 Core `0.2.1-rc.3`）并新增精确兼容声明：`engines.dsh`、`dsh.compatibility.dsh`、`dshReleases` 与五个核心译文的版本元数据同步为 `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`，保留 alpha.2／alpha.3／rc.2。

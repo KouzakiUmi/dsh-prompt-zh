@@ -94,7 +94,7 @@ DSH STORE 在本次核对时仍登记旧版 1.3.1 和旧固定提交，状态为
 
 ## 7. 仍保留的结构性边界
 
-- `runtime-context` 在 `agent/pre-step` 后由宿主 `refreshContext` 重建，仍可能恢复英文；不 patch 宿主方法或私有 hook 绕过。
+- `runtime-context` 在 `agent/pre-step` 后由宿主 `refreshContext` 重建：插件在 assemble 阶段中文化的条目改挂自有名字（`prompt-zh:*`），重建后保留中文；快照标题句与两条 `required: true` 上下文（`working-directory:current`、`team:identity`）仍为英文（2026-10-25 修复，见 CHANGELOG）。不 patch 宿主方法或使用私有 hook。
 - 创建完成后新增的外层 `prepend`、provider／网关追加文本仍可能晚于本插件处理。
 - 任意技能、记忆、知识正文、工具返回值与未知 MCP 不做通用翻译。
 - 巡检是启发式归因，不是全文覆盖率；同行中英混排、短词、代码、动态值和原文守卫未识别的变化仍需人工核对。

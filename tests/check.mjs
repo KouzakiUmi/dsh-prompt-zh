@@ -4,6 +4,7 @@
 import {
   translate,
   translateContext,
+  localizeContexts,
   filePolicy,
   networkPolicy,
   delegationPolicy,
@@ -481,6 +482,7 @@ gateCheck('Hindsight 守卫: 仅大写 Hindsight 的已知规则也翻译', tran
 const versionRuntime = (versions) => new TranslationRuntime({ preferences: { get: () => ({}) } }, () => versions).operation('test')
 const GITBASH_NATIVE_EN = `Use gitbash_native before execution when a Windows .exe needs exact literal argv such as /all or /c without MSYS conversion, or independently declared stdout/stderr encodings. Supply an absolute executable, mark each argument literal or path, and select only a known encoding (raw for unknown/mixed bytes). It does not implement shell pipelines, expansion or .cmd/.bat wrappers; only resolved danger-full-access can execute it.`
 gateCheck('gitbash 0.42.2: 原生通道路由放行', translateGitBashText(GITBASH_NATIVE_EN, versionRuntime({ gitbash: { version: '0.42.2' } })).includes('当 Windows .exe 需要未经 MSYS 转换的精确字面 argv'))
+gateCheck('gitbash 0.43.2: 已核验安装副本放行', translateGitBashText(GITBASH_NATIVE_EN, versionRuntime({ gitbash: { version: '0.43.2' } })).includes('当 Windows .exe 需要未经 MSYS 转换的精确字面 argv'))
 gateCheck('gitbash 未列版本 0.41.0: 保留原文', translateGitBashText(GITBASH_NATIVE_EN, versionRuntime({ gitbash: { version: '0.41.0' } })) === GITBASH_NATIVE_EN)
 gateCheck('hindsight 0.8.2: 知识库引导放行', translateInjectedText(INJECT_HINDSIGHT_EN, versionRuntime({ hindsight: { version: '0.8.2' } })).includes('本仓库拥有 Hindsight 记忆与知识库'))
 gateCheck('hindsight 未列版本 0.8.0: 保留原文', translateInjectedText(INJECT_HINDSIGHT_EN, versionRuntime({ hindsight: { version: '0.8.0' } })) === INJECT_HINDSIGHT_EN)
@@ -488,6 +490,23 @@ gateCheck('hindsight 未列版本 0.8.0: 保留原文', translateInjectedText(IN
 gateCheck('section 可见性: tool:jobs any 模式', isSectionVisible('tool:jobs', new Set(['job_output'])) && !isSectionVisible('tool:jobs', new Set()))
 gateCheck('section 可见性: team:policy any 模式', isSectionVisible('team:policy', new Set(['wait_agent'])) && !isSectionVisible('team:policy', new Set()))
 gateCheck('section 可见性: tool:bash all 模式', isSectionVisible('tool:bash', new Set(['bash'])) && !isSectionVisible('tool:bash', new Set()))
+
+// ── 运行时上下文：宿主 refreshContext 重建后仍保留译文 ──────────────────
+// 宿主在 step 阶段用注册表里的英文 provider 重建 context；插件把命中译文的条目
+// 挂到自有名字下，required 条目不能改名（否则会被补回英文并重复）。
+const HARNESS_CTX_EN = 'Current DeepSeek Harness implementation checkout: "C:/dsh-checkout".'
+const WEB_CTX_EN = 'Current DeepSeek Harness Web GUI URL: "http://127.0.0.1:56100".'
+gateCheck('运行时上下文: 实现目录措辞与 section 分开守卫', translateContext('harness:source', HARNESS_CTX_EN) === '当前 DeepSeek Harness 实现目录："C:/dsh-checkout"。')
+gateCheck('运行时上下文: Web GUI URL 措辞分开守卫', translateContext('app:web-surface', WEB_CTX_EN) === '当前 DeepSeek Harness Web GUI URL："http://127.0.0.1:56100"。')
+gateCheck('运行时上下文: 措辞漂移保留原文', translateContext('harness:source', 'Implementation checkout moved.') === 'Implementation checkout moved.' && translateContext('app:web-surface', 'Web GUI moved.') === 'Web GUI moved.')
+const localizedRuntimeContexts = localizeContexts([
+  { name: 'sandbox:policy', text: 'Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.' },
+  { name: 'working-directory:current', text: 'Current working directory: "C:/w".' },
+  { name: 'unknown:context', text: 'Unknown English context.' }
+], undefined)
+gateCheck('运行时上下文: 命中条目改名为插件自有条目', localizedRuntimeContexts[0].name === 'prompt-zh:sandbox:policy' && localizedRuntimeContexts[0].text.startsWith('当前 DSH 文件策略'))
+gateCheck('运行时上下文: required 条目保留原名与原文', localizedRuntimeContexts[1].name === 'working-directory:current' && localizedRuntimeContexts[1].text === 'Current working directory: "C:/w".')
+gateCheck('运行时上下文: 未命中条目不改名不改写', localizedRuntimeContexts[2].name === 'unknown:context' && localizedRuntimeContexts[2].text === 'Unknown English context.')
 
 console.log('\n=== 判断模块行为（句子↔工具关联）===')
 for (const r of gateResults) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}`)

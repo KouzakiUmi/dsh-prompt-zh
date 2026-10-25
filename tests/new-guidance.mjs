@@ -7,6 +7,8 @@ export const blenderEnglish = readFileSync(new URL('./fixtures/blender.md', impo
 export const gitbashSamples = JSON.parse(readFileSync(new URL('./fixtures/gitbash.json', import.meta.url), 'utf8'));
 // 与旧版 fixture 分开，保留原覆盖；原文取自 0.42.2 的 inline-tools 路由指导，不含 PTC 分支。
 const gitbash0422 = JSON.parse(readFileSync(new URL('./fixtures/gitbash-0.42.2.json', import.meta.url), 'utf8'));
+// 0.43.2 实际安装副本逐条比对后的原文；破折号变体已在新版移除，故不在此 fixture 中。
+const gitbash0432 = JSON.parse(readFileSync(new URL('./fixtures/gitbash-0.43.2.json', import.meta.url), 'utf8'));
 
 export async function newGuidanceChecks(assemble, preStep) {
   const results = [];
@@ -73,6 +75,21 @@ export async function newGuidanceChecks(assemble, preStep) {
       assert.equal(translateGitBashText(sample.text, previous), sample.text);
     });
   }
+  for (const sample of gitbash0432) {
+    check(`gitbash 0.43.2: ${sample.label} 放行／未列版本保留／幂等`, () => {
+      const current = new TranslationRuntime({}, () => ({ gitbash: { version: '0.43.2' } })).operation('test');
+      const unlisted = new TranslationRuntime({}, () => ({ gitbash: { version: '0.43.1' } })).operation('test');
+      const output = translateGitBashText(sample.text, current);
+      assert.ok(output.includes(sample.expected));
+      assert.equal(translateGitBashText(output, current), output);
+      assert.equal(translateGitBashText(sample.text, unlisted), sample.text);
+    });
+  }
+  check('gitbash: 0.42.2 破折号变体不在 0.43.2 放行范围', () => {
+    const current = new TranslationRuntime({}, () => ({ gitbash: { version: '0.43.2' } })).operation('test');
+    const retired = "Prefer this bash tool for shell syntax, scripts, pipelines, redirection, globbing and POSIX utilities — it is this host's shell.";
+    assert.equal(translateGitBashText(retired, current), retired);
+  });
   check('gitbash: 严格模式不扩展虚拟挂载支持／新版关闭与开启不混淆', () => {
     assert.ok(!translateGitBashText(gitbashSamples[1].text).includes('/tmp'));
     assert.ok(translateGitBashText(gitbashSamples[4].text).includes('尽力转换'));
