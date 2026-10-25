@@ -1,6 +1,6 @@
 {
   "name": "dsh-prompt-zh",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "displayName": "系统提示词中文化",
   "description": "中文化 DSH 已知提示词；原生设置页逐条编辑译文、组件开关、精确版本门控及匹配诊断，按 Profile 保存。保留工具名、参数结构与动态值。",
   "keywords": [

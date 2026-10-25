@@ -54,7 +54,7 @@ Browser time zone for this request: unavailable. Ask the user to clarify otherwi
 
 运行时翻译保留全局兜底，并在 agent 初始化完成后注册本 agent 的作用域监听器，覆盖随后由 preset 挂载的时间等注入；对已经存在的 agent 回补，并随 agent、依赖或插件卸载清理。
 
-1.3.2 延续逐条译文设置页，并适配已核验的 Core 0.2.1-rc.2、Git Bash 0.42.2 与 Hindsight 0.8.2；版本发布状态以 GitHub Release 与 npm registry 为准，安装后仍需在目标 Profile 验收。main 分支的后续未发布改动已复核 Core 0.2.1-rc.3 并追加精确兼容声明，该声明在对应版本发布前不代表 npm 包已包含。Git Bash、Hindsight 仅在当前解析包版本与条目已核验精确版本一致时翻译，未知或不符版本保留原文；已知 MCP server 独立按原文守卫执行。Git Bash context 在组装时可以有译文，但当前 Core 的后续 `refreshContext` 仍可能恢复来源英文；补译文不等于改变宿主的最终快照生成。
+1.3.3 延续逐条译文设置页，并适配已核验的 Core 0.2.1-rc.3（保留 alpha.2／alpha.3／rc.2 兼容声明）、Git Bash 0.42.2 与 Hindsight 0.8.2；版本发布状态以 GitHub Release 与 npm registry 为准，安装后仍需在目标 Profile 验收。Git Bash、Hindsight 仅在当前解析包版本与条目已核验精确版本一致时翻译，未知或不符版本保留原文；已知 MCP server 独立按原文守卫执行。Git Bash context 在组装时可以有译文，但当前 Core 的后续 `refreshContext` 仍可能恢复来源英文；补译文不等于改变宿主的最终快照生成。
 
 ## 逐条编辑译文
 
@@ -116,7 +116,7 @@ dsh plugin --profile web add "<tarball 的绝对路径>"
 | [兼容性与覆盖范围](docs/compatibility.md) | 能翻译什么、英文残留原因、已验证环境与权限边界 |
 | [开发与验证](docs/development.md) | 模块结构、离线测试、真实宿主验证、打包与发布流程 |
 | [本轮适配与加固报告](docs/audit-report.md) | 本轮改动、真实会话巡检结果、验证证据与待决事项 |
-| [更新记录](CHANGELOG.md) | 未发布改动、1.3.2 修复内容与已核实的历史里程碑 |
+| [更新记录](CHANGELOG.md) | 1.3.3 兼容 Core rc.3、1.3.2 修复内容与已核实的历史里程碑 |
 | [展示资源说明](assets/README.md) | 横幅的事实来源、字体引用与文档素材约定 |
 
 ---
