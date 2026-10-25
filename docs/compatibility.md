@@ -26,7 +26,7 @@
 
 ## 设置与第三方精确版本门控
 
-Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3` 与 `0.2.1-rc.2` 的 `settings`、`configForms` 和已认证 `connection.fetch` 契约；不沿用旧纯 Host 版本对早期 Core 的界面兼容声明。缺少相应服务或 Schema 时不能冒充可保存配置。兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。
+Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2` 与 `0.2.1-rc.3` 的 `settings`、`configForms` 和已认证 `connection.fetch` 契约；不沿用旧纯 Host 版本对早期 Core 的界面兼容声明。缺少相应服务或 Schema 时不能冒充可保存配置。兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。
 
 每个内置译文条目使用同一运行时登记点，保存的覆盖值在真实 section、context、消息或附加说明替换函数中读取。带工具关联的自定义段落在关联工具缺失时临时回退内置值再裁剪，并记录回退次数；不改保存值，工具齐全后继续使用覆盖值。组件关闭后保留原文。第三方按精确版本放行：Git Bash 0.39.0／0.39.4 与 0.42.2 的提示分别登记适用版本（0.42.2 的路由与原生通道指导独立列出），Hindsight 包装基线为 0.8.1／0.8.2；未知版本不放行。MCP 已知 server 是例外：每条译文都带原文特征守卫，命中才替换，因此不依赖服务器版本；未知 server 仍按标题与正文保留原文处理。
 
@@ -55,20 +55,22 @@ Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3` 与 `0.2.1-
 
 2026-10-23 的 1.3.2 修复快照重新通过离线回归、清单校验、alpha.3 fixture 与 rc.2 解包宿主的 host-smoke。使用现场已有 Playwright Core 1.63.0、Chrome 和 rc.2 前端静态库（React 18.3.1）完成离线浏览器回归：编辑／模拟宿主保存进入实际翻译、草稿还原、390px 布局、依赖消失禁用保存和样式清理均通过。没有访问生产 GUI 或进行生产 Profile 保存。
 
+2026-10-25 复核当前官方桌面安装包（DeepSeek Harness，桌面壳 `@deepseek-ai/dsh-desktop` 与 Core 均为 `0.2.1-rc.3`）。rc.2→rc.3 的只读解析先校验 ASAR 头与条目 SHA256 完整性，再逐文件比对（rc.2 侧使用复核时保留的上一基线只读解包副本，副本未入库；本机该旧安装随后已不在，结论来自本次实测）：`@deepseek-ai/dsh-system-prompt`、`dsh-time-context`、`dsh-agent-instructions`、`dsh-tool-skill`、`dsh-agent-loop`、`dsh-scope`、`dsh-llm` 的 JS 内容未变（差异仅为 `package.json` 版本号与上游删除的 README／LICENSE 文件），因此既有 section／context 原文守卫与时间、工作区、技能目录译文无需改表。插件依赖的 `settings.configure`（`dsh-settings`）、`configEditor`（`dsh-config-editor`）、`connection.fetch.register`（`dsh-client-connection`）实现文件同样未变；`pluginPackages.packageOf(specifier, parentURL)` 签名与返回结构（`name`／`version`／`dir`／`manifestPath`／`manifest`）保持不变，`profileContext.resolvePackageManifest` 服务在 rc.2 与 rc.3 中均不存在，插件改用的 `packageOf` 解析路径继续适用。`dsh-app-boot` 在 `readProfilePatches` 中移除了 `context.readPatches` 短路，在 `manifestOf` 中移除了 `profileContext.resolvePackageManifest` 回退；这些分支都不在本插件调用路径上。把 ASAR 只读解包到工作区临时目录后运行 host-smoke：rc.3 宿主 ALL PASS（插件加载、assemble、时间注入、作用域监听、卸载／恢复与 `refreshContext` 边界）。使用现场 Playwright Core `1.64.0-alpha-1790635538000`、Chrome `155.0.8059.85` 与 rc.3 随包前端静态库（随包资源哈希已变更、React 18.3.1）完成同一套离线浏览器回归：编辑／模拟宿主保存进入实际翻译、草稿还原、390px 布局、依赖消失禁用保存与样式清理均通过。rc.3 移除了 `dsh-computer-use`、`dsh-experimental-computer-use-cua-driver-native` 等实验包，相应 CUA 译文只在匹配到原文时才生效；条目未删除，不影响其他已知文本。提取时验证归档完整性，未修改安装包；没有访问生产 GUI、没有做真实配置保存，也没有在生产 Profile 安装。
+
 | 层级／包 | 先前基线 → 当前再核验 | 核验范围 |
 | --- | --- | --- |
-| Desktop 桌面壳 | `2.0.18-next` → `2.0.19-next` | 安装包 manifest 与当前消费进程来源；不是 CLI 版本 |
-| `@deepseek-ai/dsh`（Core） | 当前 `0.2.1-rc.2` | ASAR 中实际 Core manifest，与壳版本分开 |
-| `@deepseek-ai/dsh-system-prompt` | `0.2.1-alpha.3` → `0.2.1-rc.2` | 真实模块组装、工具 schema 保留、`refreshContext` 覆盖边界 |
-| `@deepseek-ai/dsh-time-context` | `0.2.1-alpha.3` → `0.2.1-rc.2` | 真实时间注入、已知与缺省时区 |
-| `@deepseek-ai/dsh-scope` | 随对应 Core 解析 | agent 作用域路由与子作用域隔离 |
-| `@deepseek-ai/cordis` | `4.0.5-alpha.2` → `4.0.5` | 动态依赖、冻结消息、卸载／恢复、插件清理 |
-| `@deepseek-ai/schemastery` | `3.18.5-alpha.2` → `3.18.5` | 保存值校验、动态占位符保护与客户端 JSON 重建 |
-| `@deepseek-ai/dsh-web-frontend` | 当前 `0.2.1-rc.2` | 包版本已核验；1.3.2 快照已重新通过离线浏览器回归，覆盖编辑、保存进入真实翻译、草稿还原、窄屏布局与依赖卸载 |
+| Desktop 桌面壳 | `2.0.19-next` → `0.2.1-rc.3` | 当前运行进程来源与安装包 manifest；官方 DeepSeek Harness 安装包，不是 CLI 版本 |
+| `@deepseek-ai/dsh`（Core） | 当前 `0.2.1-rc.3` | ASAR 中实际 Core manifest，与壳版本分开 |
+| `@deepseek-ai/dsh-system-prompt` | `0.2.1-rc.2` → `0.2.1-rc.3` | JS 内容逐文件一致；真实模块组装、工具 schema 保留、`refreshContext` 覆盖边界 |
+| `@deepseek-ai/dsh-time-context` | `0.2.1-rc.2` → `0.2.1-rc.3` | JS 内容逐文件一致；真实时间注入、已知与缺省时区 |
+| `@deepseek-ai/dsh-scope` | 随对应 Core 解析（`0.2.1-rc.3`） | agent 作用域路由与子作用域隔离 |
+| `@deepseek-ai/cordis` | `4.0.5`（rc.2／rc.3 相同） | 动态依赖、冻结消息、卸载／恢复、插件清理 |
+| `@deepseek-ai/schemastery` | `3.18.5`（rc.2／rc.3 相同） | 保存值校验、动态占位符保护与客户端 JSON 重建 |
+| `@deepseek-ai/dsh-web-frontend` | 当前 `0.2.1-rc.3` | 新资源哈希；rc.3 静态库已通过离线浏览器回归，覆盖编辑、保存进入真实翻译、草稿还原、窄屏布局与依赖卸载 |
 
 **这些是具体包和桌面壳的版本，不是 DSH CLI 或 DSH 自带 npm 管理器版本。** 本轮不以 `dsh --version` 推断 Core，也未单独验证 CLI 发行版本。
 
-当前工作区清单明确列出 `0.2.1-alpha.2`、`0.2.1-alpha.3` 和 `0.2.1-rc.2`，核心译文条目的已核验版本元数据与之同步。其他 Core 版本不自动获得兼容验收结论；核心译文仍按原文守卫尝试翻译，不将版本元数据误作严格阻断门。现场 Git Bash 为 0.42.2、Hindsight 为 0.8.2，两者均已列入精确放行清单；MCP 已知 server 不依赖服务器版本，按原文守卫执行，未知 server 仍不翻译。以上不是生产 Profile 写入、全 provider 组合或所有新增英文文本的验收；本次未安装到生产 Profile，发布状态以 GitHub Release 和 npm registry 为准。
+当前工作区清单明确列出 `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2` 和 `0.2.1-rc.3`，核心译文条目的已核验版本元数据与之同步。其他 Core 版本不自动获得兼容验收结论；核心译文仍按原文守卫尝试翻译，不将版本元数据误作严格阻断门。现场 Git Bash 为 0.42.2、Hindsight 为 0.8.2，两者均已列入精确放行清单；MCP 已知 server 不依赖服务器版本，按原文守卫执行，未知 server 仍不翻译。以上不是生产 Profile 写入、全 provider 组合或所有新增英文文本的验收；本次未安装到生产 Profile，发布状态以 GitHub Release 和 npm registry 为准。
 
 ## 插件库兼容与固定来源复核
 

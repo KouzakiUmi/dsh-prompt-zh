@@ -221,7 +221,7 @@ check('injected:mcp-full', injectedMcpOut, [
 ])
 const idemInjectedMcp = translateInjectedText(injectedMcpOut) === injectedMcpOut
 
-// ── 新宿主形态原文（Core 0.2.1-alpha.3／rc.2）：终端纪律、会话检索、运行时命名段落 ──
+// ── 新宿主形态原文（Core 0.2.1-alpha.3／rc.2／rc.3）：终端纪律、会话检索、运行时命名段落 ──
 // 这些 section 在旧版本里没有或在 alpha.3 起改变了措辞，用宿主源码原文固定放行。
 const PTY_EN = `Use a terminal session only when work needs persistent terminal state or interactive stdin; prefer shell/read/write/edit for bounded one-shot operations. Track every terminal session id and close sessions that no longer matter. An inferred_idle or timeout result does not prove the foreground command exited.`
 const SESSION_QUERY_EN = `Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_trace, session_event_trace, or session_event_read when you need lineage, relationships, or exact data.`

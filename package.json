@@ -17,7 +17,7 @@
   "main": "./lib/index.js",
   "engines": {
     "node": ">=18",
-    "dsh": "0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-rc.2"
+    "dsh": "0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-rc.2 || 0.2.1-rc.3"
   },
   "exports": {
     ".": "./lib/index.js",
@@ -58,11 +58,12 @@
     },
     "compatibility": {
       "node": ">=18",
-      "dsh": "0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-rc.2",
+      "dsh": "0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-rc.2 || 0.2.1-rc.3",
       "dshReleases": {
         "0.2.1-alpha.2": "compatible",
         "0.2.1-alpha.3": "compatible",
-        "0.2.1-rc.2": "compatible"
+        "0.2.1-rc.2": "compatible",
+        "0.2.1-rc.3": "compatible"
       }
     }
   },

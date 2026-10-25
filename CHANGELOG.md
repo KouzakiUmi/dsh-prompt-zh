@@ -6,7 +6,10 @@
 
 ## 未发布
 
-- 版本解析改用宿主 `pluginPackages.packageOf` 已解析记录的 `name`/`version`，运行时不再读取任何文件；旧的 `profileContext.resolvePackageManifest` 路径在已声明的全部核心版本（alpha.2/alpha.3/rc.2）宿主中并不存在，测试桩同步改为 `pluginPackages` 并删除孤儿 package-meta fixture。
+- 复核官方 DeepSeek Harness 桌面安装包 `0.2.1-rc.3`（随包 Core `0.2.1-rc.3`）并新增精确兼容声明：`engines.dsh`、`dsh.compatibility.dsh`、`dshReleases` 与五个核心译文的版本元数据同步为 `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`，保留 alpha.2／alpha.3／rc.2。
+- rc.2→rc.3 只读比对（ASAR 头与条目 SHA256 完整性校验）：`dsh-system-prompt`、`dsh-time-context`、`dsh-agent-instructions`、`dsh-tool-skill`、`dsh-agent-loop`、`dsh-scope`、`dsh-llm` 的 JS 内容未变，仅版本号与上游删除的文档文件不同；`settings.configure`、`configEditor`、`connection.fetch.register` 实现文件未变，`pluginPackages.packageOf(specifier, parentURL)` 签名与返回结构保持，rc.2 起已不存在的 `profileContext.resolvePackageManifest` 在 rc.3 中同样缺失。
+- rc.3 只读解包宿主运行 host-smoke 为 ALL PASS；rc.3 随包前端静态库（新资源哈希，React 18.3.1）通过同一套离线浏览器回归。rc.3 移除 `dsh-computer-use` 等实验包，相应 CUA 译文只在原文命中时生效，条目不删除。
+- 版本解析改用宿主 `pluginPackages.packageOf` 已解析记录的 `name`/`version`，运行时不再读取任何文件；旧的 `profileContext.resolvePackageManifest` 路径在已声明的全部核心版本（alpha.2/alpha.3/rc.2/rc.3）宿主中并不存在，测试桩同步改为 `pluginPackages` 并删除孤儿 package-meta fixture。
 
 ## 1.3.2 — 2026-10-23
 
