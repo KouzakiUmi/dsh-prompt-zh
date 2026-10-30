@@ -147,12 +147,12 @@ export async function settingsChecks() {
     const lookedUp = [];
     const fake = { get: (name) => name === 'pluginPackages' ? {
       packageOf: (name, from) => { lookedUp.push(name); assert.ok(from.endsWith('/lib/settings-host.js'));
-        return { name, version: name === 'dsh-gitbash-shell' ? '0.42.2' : name === '@vectorize-io/hindsight-coding-agents' ? '0.8.2' : '0.2.1-rc.3' }; }
+        return { name, version: name === 'dsh-gitbash-shell' ? '0.42.2' : name === '@vectorize-io/hindsight-coding-agents' ? '0.8.2' : '0.2.1-rc.5' }; }
     } : undefined };
     const resolved = versionResolver(fake)();
     assert.equal(resolved.gitbash.version, '0.42.2');
     assert.equal(resolved.hindsight.version, '0.8.2');
-    assert.equal(resolved.core.version, '0.2.1-rc.3');
+    assert.equal(resolved.core.version, '0.2.1-rc.5');
     assert.equal(lookedUp.filter((name) => name === '@deepseek-ai/dsh-system-prompt').length, 1);
   });
   const routes = [], callbacks = new Map();

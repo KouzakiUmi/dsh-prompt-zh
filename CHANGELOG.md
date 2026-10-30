@@ -8,6 +8,10 @@
 
 暂无。
 
+## 1.3.5 — 2026-10-30
+
+- 追加 `0.2.1-rc.5` 精确兼容声明：`engines.dsh`、`dsh.compatibility.dsh`、`dshReleases` 与五个核心组件版本元数据（`core`、`workspace`、`skills`、`time`、`context`）同步更新；兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。更新 README 与兼容性文档版本列表。
+
 ## 1.3.4 — 2026-10-25
 
 - 修复运行时上下文快照在宿主 `refreshContext` 重建后恢复英文：assemble 阶段命中译文的 context 条目改挂 `prompt-zh:*` 自有名字，宿主重建时 `providers.get(name)` 为空，译文保留。覆盖文件策略、审批策略、Subagent 委派、实现目录、Web GUI URL 与 Git Bash POSIX 指导。
