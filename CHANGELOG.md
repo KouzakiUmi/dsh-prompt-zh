@@ -8,6 +8,13 @@
 
 暂无。
 
+## 1.3.6 — 2026-10-31
+
+- 追加 `0.2.1-rc.4` 精确兼容声明：`engines.dsh`、`dsh.compatibility.dsh`、`dshReleases` 与五个核心组件版本元数据（`core`、`workspace`、`skills`、`time`、`context`）同步更新。
+- 本轮验收环境为 dsh-go 手机 App 本机引擎（bridge 0.4.0，Core `0.2.1-rc.4`，Node 24.22.1，`dshPatches` 为 fs-create-exclusive／route-guard／zz-direct-runtime）。只读核对确认 go 侧没有独立提示词系统：`/opt/dsh-go` 与 dsh-go-bridge 均不含 `system-prompt`／`assemble`／`pre-step` 接入，手机提示词走同一套 Core 管线加同一份 `~/.dsh/AGENTS.md`。
+- 用该宿主自身导出的 `evaluatePluginCompatibility` 判定 `1.3.6` 清单为 compatible；`tests/host-smoke.mjs /opt/dsh` 在该 rc.4 宿主上 ALL PASS（插件真实加载、assemble、时间注入、作用域监听、卸载／恢复与 `refreshContext` 边界）。
+- 未在本轮做：rc.4 与 rc.3／rc.5 的逐文件 SHA256 对照、设置页浏览器回归、生产 Profile 的真实配置保存验收。新增译文条目（`tool:read`／`tool:write`／`tool:edit`／`tool:glob`／`tool:grep`／`tool:web_search`／`tool:web_fetch`／`mcp-resource-servers`）按既有原文守卫执行，未在 go 实机会话中逐条验收。
+
 ## 1.3.5 — 2026-10-30
 
 - 追加 `0.2.1-rc.5` 精确兼容声明：`engines.dsh`、`dsh.compatibility.dsh`、`dshReleases` 与五个核心组件版本元数据（`core`、`workspace`、`skills`、`time`、`context`）同步更新；兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。更新 README 与兼容性文档版本列表。

@@ -26,7 +26,7 @@
 
 ## 设置与第三方精确版本门控
 
-Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3` 与 `0.2.1-rc.5` 的 `settings`、`configForms` 和已认证 `connection.fetch` 契约；不沿用旧纯 Host 版本对早期 Core 的界面兼容声明。缺少相应服务或 Schema 时不能冒充可保存配置。兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。
+Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4` 与 `0.2.1-rc.5` 的 `settings`、`configForms` 和已认证 `connection.fetch` 契约；不沿用旧纯 Host 版本对早期 Core 的界面兼容声明。缺少相应服务或 Schema 时不能冒充可保存配置。兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。
 
 每个内置译文条目使用同一运行时登记点，保存的覆盖值在真实 section、context、消息或附加说明替换函数中读取。带工具关联的自定义段落在关联工具缺失时临时回退内置值再裁剪，并记录回退次数；不改保存值，工具齐全后继续使用覆盖值。组件关闭后保留原文。第三方按精确版本放行：Git Bash 0.39.0／0.39.4／0.42.2／0.43.2 的提示分别登记适用版本（0.42.2 的路由与原生通道指导独立列出，0.43.2 逐条复核），Hindsight 包装基线为 0.8.1／0.8.2；未知版本不放行。MCP 已知 server 是例外：每条译文都带原文特征守卫，命中才替换，因此不依赖服务器版本；未知 server 仍按标题与正文保留原文处理。
 
@@ -57,9 +57,12 @@ Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc
 
 2026-10-25 复核当前官方桌面安装包（DeepSeek Harness，桌面壳 `@deepseek-ai/dsh-desktop` 与 Core 均为 `0.2.1-rc.3`）：只读解析 ASAR 并校验头与条目 SHA256 完整性，解包到工作区临时目录后运行 host-smoke，rc.3 宿主 ALL PASS（插件加载、assemble、时间注入、作用域监听、卸载／恢复与 `refreshContext` 边界）。rc.2→rc.3 的逐文件对照改用 npm registry 发布的同版本包（只读下载、内存解包、逐文件 SHA256）：`@deepseek-ai/dsh-system-prompt`、`dsh-time-context`、`dsh-agent-instructions`、`dsh-tool-skill`、`dsh-agent-loop`、`dsh-scope`、`dsh-llm`、`dsh-settings`、`dsh-config-editor`、`dsh-client-connection`、`dsh-app-boot` 的全部文件一致，唯一差异是 `package.json` 的版本号，无新增或删除文件；桌面 ASAR 中部分包的 README／LICENSE 缺失是安装包打包裁剪所致，不是上游删除（npm 包内两版都存在且一致）。因此既有 section／context 原文守卫与时间、工作区、技能目录译文无需改表，插件依赖的 `settings.configure`、`configEditor`、`connection.fetch.register` 实现文件同样未变。`pluginPackages.packageOf(specifier, parentURL)` 签名与返回结构（`name`／`version`／`dir`／`manifestPath`／`manifest`）保持不变，`profileContext.resolvePackageManifest` 服务在 rc.2 与 rc.3 中均不存在，插件改用的 `packageOf` 解析路径继续适用。使用现场 Playwright Core `1.64.0-alpha-1790635538000`、Chrome `155.0.8059.85` 与 rc.3 随包前端静态库（随包资源哈希已变更、React 18.3.1）完成同一套离线浏览器回归：编辑／模拟宿主保存进入实际翻译、草稿还原、390px 布局、依赖消失禁用保存与样式清理均通过。rc.3 桌面随包不再包含 `dsh-computer-use`、`dsh-experimental-computer-use-cua-driver-native` 等实验包（npm 上仍有对应 rc.3 版本），相应 CUA 译文只在匹配到原文时才生效；条目未删除，不影响其他已知文本。此前使用的旧 NEXT 桌面安装包（`2.0.19-next`）随包文件与 npm 发布版不同，不作为 rc.2 基线。提取时验证归档完整性，未修改安装包；没有访问生产 GUI、没有做真实配置保存，也没有在生产 Profile 安装。
 
+2026-10-31 复核 dsh-go 手机 App 本机引擎（`/etc/dsh-app/runtime.json`：bridge `0.4.0`，Core `0.2.1-rc.4`，Node `24.22.1`，`dshPatches` 为 fs-create-exclusive／route-guard／zz-direct-runtime）。只读核对 `/opt/dsh-go` 与 dsh-go-bridge 源码：不含 `system-prompt`／`assemble`／`pre-step` 接入，go 侧没有独立提示词系统，手机提示词走同一套 Core 管线加同一份 `~/.dsh/AGENTS.md`（普通工作区指令，来源与包装由 `workspace` 组件处理，用户正文不通用翻译）。用该宿主自身导出的 `evaluatePluginCompatibility` 判定 `1.3.6` 清单为 compatible；`tests/host-smoke.mjs /opt/dsh` 在该 rc.4 宿主上 ALL PASS。未做 rc.4 与 rc.3／rc.5 的逐文件 SHA256 对照，未运行浏览器回归，未在 go 实机会话中逐条验收新增译文条目。
+
 | 层级／包 | 先前基线 → 当前再核验 | 核验范围 |
 | --- | --- | --- |
 | Desktop 桌面壳 | `2.0.19-next` → `0.2.1-rc.3` | 当前运行进程来源与安装包 manifest；官方 DeepSeek Harness 安装包，不是 CLI 版本 |
+| dsh-go 本机引擎 | `—` → `0.2.1-rc.4`（bridge 0.4.0） | 运行时清单与源码只读核对；无独立提示词系统；host-smoke ALL PASS，未做逐文件对照 |
 | `@deepseek-ai/dsh`（Core） | 当前 `0.2.1-rc.3` | ASAR 中实际 Core manifest，与壳版本分开 |
 | `@deepseek-ai/dsh-system-prompt` | `0.2.1-rc.2` → `0.2.1-rc.3` | JS 内容逐文件一致；真实模块组装、工具 schema 保留、`refreshContext` 覆盖边界 |
 | `@deepseek-ai/dsh-time-context` | `0.2.1-rc.2` → `0.2.1-rc.3` | JS 内容逐文件一致；真实时间注入、已知与缺省时区 |
@@ -70,7 +73,7 @@ Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc
 
 **这些是具体包和桌面壳的版本，不是 DSH CLI 或 DSH 自带 npm 管理器版本。** 本轮不以 `dsh --version` 推断 Core，也未单独验证 CLI 发行版本。
 
-当前工作区清单明确列出 `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3` 和 `0.2.1-rc.5`，核心译文条目的已核验版本元数据与之同步。其他 Core 版本不自动获得兼容验收结论；核心译文仍按原文守卫尝试翻译，不将版本元数据误作严格阻断门。现场 Git Bash 为 0.43.2、Hindsight 为 0.8.2，两者均已列入精确放行清单（0.43.2 的 11 条原文已逐条比对实际安装副本）；MCP 已知 server 不依赖服务器版本，按原文守卫执行，未知 server 仍不翻译。以上不是全 provider 组合或所有新增英文文本的验收；发布状态以 GitHub Release 和 npm registry 为准。
+当前工作区清单明确列出 `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4` 和 `0.2.1-rc.5`，核心译文条目的已核验版本元数据与之同步。其他 Core 版本不自动获得兼容验收结论；核心译文仍按原文守卫尝试翻译，不将版本元数据误作严格阻断门。现场 Git Bash 为 0.43.2、Hindsight 为 0.8.2，两者均已列入精确放行清单（0.43.2 的 11 条原文已逐条比对实际安装副本）；MCP 已知 server 不依赖服务器版本，按原文守卫执行，未知 server 仍不翻译。以上不是全 provider 组合或所有新增英文文本的验收；发布状态以 GitHub Release 和 npm registry 为准。
 
 ## 插件库兼容与固定来源复核
 
