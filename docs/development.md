@@ -79,11 +79,13 @@ node tests/host-smoke.mjs "<宿主 app 根目录>"
 验证项：
 
 - 插件真实加载，已知身份与新版多工具委派规则进入中文组装结果。
-- 通用工具 description 与参数 schema 保持原文；已知 Git Bash 附加指导在内层／外层两种 before-next 注册顺序下均翻译。
+- 通用工具 description 与参数 schema 保持原文；0.2.1 宿主按来源插件的 before-next 方式追加 Git Bash 附加指导时翻译为中文；0.2.2-rc.1 起工具声明由 provider 持有（assemble 只从 `context.toolSet` 读工具名），声明保持原文（已知边界）。
 - Blender 译表有纯函数全文覆盖；已知 MCP 服务器无需版本证明，按原文守卫翻译，未知服务器不套用其他服务器的译表。已核验 Git Bash context 与其余运行时上下文在 `refreshContext` 重建后保留中文（条目改挂 `prompt-zh:*` 自有名字），并断言标题句与 required 条目仍为英文的边界。
 - 插件先加载、preset 后注册时，旧全局接线漏译；初始化后的作用域接线修复该顺序。
 - 已有／新建 agent、真实时间插件、缺省／已知时区、子作用域路由与冻结消息。
 - `agents` 卸载／恢复、插件卸载时，对外部 `agent.ctx` 监听器的清理。
+
+脚本对宿主版本自适应：`system-prompt/assemble` 的瀑布值是否携带 `tools` 决定工具描述断言；`sessionProjections.register` 同时兼容旧服务查询与 0.2.2-rc.1 的返回句柄形态。
 
 本轮基线与生产验收状态见 [兼容性文档](compatibility.md)。此脚本不自动进入公共 CI，因为 CI 没有桌面宿主安装目录。脚本也执行[设置 Schema 回归](<../tests/settings.mjs>)，验证实际宿主 Schema 与客户端 JSON 重建，不将一次性会话探针代替固定测试入口。
 

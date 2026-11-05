@@ -175,6 +175,46 @@ check('injected:instructions', instOut, ['以下工作区指令可能与你的�
 const skillOut = translateInjectedText(INJECT_SKILLS_EN)
 check('injected:skills', skillOut, ['可用技能目录已发生变化', '仅使用此替换目录中列出的技能名称', '用户也可能直接调用技能'])
 
+// 0.2.2-rc.1 的技能发现不完整分支：目录替代句、未检查提示与空目录纪律。
+const INJECT_SKILLS_INCOMPLETE_EN = `<system-reminder>
+Skill discovery is incomplete. This catalog of currently available skills replaces every earlier available-skills list in this session:
+
+<available_skills>
+- \`context7-mcp\`: fetch docs
+</available_skills>
+
+Some skills could not be checked. Only confirmed skills are listed; a lower-priority definition of the same name may be selected when a preferred source is unavailable. Discovery will be retried on the next request.
+
+Use only names in this replacement catalog. If the user names a listed skill, or the task clearly matches its description, call the \`skill\` tool with the exact name before acting.
+</system-reminder>`
+
+const INJECT_SKILLS_EMPTY_EN = `<system-reminder>
+No skills could be confirmed in this discovery attempt.
+
+<available_skills>
+</available_skills>
+
+Wait for an updated catalog before calling the \`skill\` tool. Do not infer skill instructions from an empty catalog.
+</system-reminder>`
+
+const INJECT_SKILLS_UPDATE_EMPTY_EN = `<system-reminder>
+Skill discovery is incomplete. This catalog of currently available skills replaces every earlier available-skills list in this session:
+
+<available_skills>
+</available_skills>
+
+Some skills could not be checked. Only confirmed skills are listed; a lower-priority definition of the same name may be selected when a preferred source is unavailable. Discovery will be retried on the next request.
+
+No skills could be confirmed in this discovery attempt. Do not use names from earlier skill catalogs.
+</system-reminder>`
+
+const skillIncompleteOut = translateInjectedText(INJECT_SKILLS_INCOMPLETE_EN)
+check('injected:skills-incomplete', skillIncompleteOut, ['技能发现过程不完整', '部分技能无法检查', '仅使用此替换目录中列出的技能名称'])
+const skillEmptyOut = translateInjectedText(INJECT_SKILLS_EMPTY_EN)
+check('injected:skills-empty', skillEmptyOut, ['本次发现未能确认任何技能', '在获得更新后的目录前，不要调用 `skill` 工具'])
+const skillUpdateEmptyOut = translateInjectedText(INJECT_SKILLS_UPDATE_EMPTY_EN)
+check('injected:skills-update-empty', skillUpdateEmptyOut, ['技能发现过程不完整', '本次发现未能确认任何技能。不要使用先前技能目录中的名称。'])
+
 const headOut = translateInjectedText(INJECT_CONTEXT_HEAD_EN)
 check('injected:context-head', headOut, ['当前运行时上下文。此快照替代此前的运行时上下文快照。'])
 
@@ -195,6 +235,9 @@ check('injected:hindsight-memory', memOut, ['由 Hindsight 从此工作区自身
 
 const idemInst = translateInjectedText(instOut) === instOut
 const idemSkill = translateInjectedText(skillOut) === skillOut
+const idemSkillIncomplete = translateInjectedText(skillIncompleteOut) === skillIncompleteOut
+const idemSkillEmpty = translateInjectedText(skillEmptyOut) === skillEmptyOut
+const idemSkillUpdateEmpty = translateInjectedText(skillUpdateEmptyOut) === skillUpdateEmptyOut
 const idemHead = translateInjectedText(headOut) === headOut
 const idemTime = translateInjectedText(timeOut) === timeOut
 const idemTimeStep1 = translateInjectedText(timeStep1Out) === timeStep1Out
@@ -474,6 +517,16 @@ gateCheck('守卫命中: pwsh 真实原文 → 翻译', translate('tool:pwsh', '
 gateCheck('守卫命中: ptc-only 真实原文 → 翻译', translate('tools:ptc-only', PTC_ONLY_EN).includes('你唯一能直接调用的工具'))
 gateCheck('守卫命中: ralph 真实原文 → 翻译', translate('tool:ralph', RALPH_EN).includes('Ralph loop 或每轮使用全新 agent'))
 gateCheck('守卫命中: team 真实原文 → 翻译', translate('team:policy', TEAM_POLICY_EN).includes('Agent Teams'))
+// 0.2.2-rc.1 新增/变化的 section 原文守卫：命中才替换，措辞漂移保留原文。
+const APPLY_PATCH_EN = 'Prefer apply_patch over separate edit calls for changes across files or separated regions. Give every hunk enough surrounding context lines to match one place in the current file. The whole patch is checked first (syntax, hunk matching, missing files) and a rejected patch changes nothing; once applying starts, operations run in order, stop at the first failure, and are not rolled back, so re-read affected files before retrying when needed.'
+gateCheck('守卫命中: apply_patch 新原文 → 翻译', translate('tool:apply_patch', APPLY_PATCH_EN).includes('跨文件或分散区域'))
+gateCheck('保守守卫: apply_patch 输入漂移 → 保留原文', translate('tool:apply_patch', 'Prefer some other patch tool.') === 'Prefer some other patch tool.')
+const SCHEDULE_AUTH_EN = "Only create or modify scheduled tasks at the user's explicit request; prior explicit user authorization for the running scheduled task remains valid."
+gateCheck('守卫命中: schedule 授权原文 → 翻译', translate('tool:schedule', SCHEDULE_AUTH_EN).includes('仅在用户明确要求时创建或修改计划任务'))
+gateCheck('保守守卫: schedule 输入漂移 → 保留原文', translate('tool:schedule', 'Change scheduled tasks whenever you like.') === 'Change scheduled tasks whenever you like.')
+const STRUCTURED_OUTPUT_EN = 'When you have your final answer, you MUST report it by calling the `structured_output` tool with arguments matching its parameter schema exactly. Do not finish with a plain text answer: only the tool call counts as your result.'
+gateCheck('守卫命中: structured_output 新原文 → 翻译', translate('tool:structured_output', STRUCTURED_OUTPUT_EN).includes('有最终答案时'))
+gateCheck('保守守卫: structured_output 旧措辞 → 保留原文', translate('tool:structured_output', 'When you have a final answer, respond in plain text.') === 'When you have a final answer, respond in plain text.')
 // 守卫大小写不敏感：仅含大写 Hindsight（无小写标签）的已知规则仍须翻译。
 const CAPITAL_ONLY_HIND = `ALSO your correction tool: when you verify a Hindsight memory is wrong or stale, ingest a "Correction: <topic>" doc stating what memory claimed, what is true now, and the evidence — newer facts supersede older ones.`
 gateCheck('Hindsight 守卫: 仅大写 Hindsight 的已知规则也翻译', translateInjectedText(CAPITAL_ONLY_HIND).includes('它也是你的纠错工具'))
@@ -511,7 +564,7 @@ gateCheck('运行时上下文: 未命中条目不改名不改写', localizedRunt
 console.log('\n=== 判断模块行为（句子↔工具关联）===')
 for (const r of gateResults) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}`)
 
-const idemsAll = idemPlan && idemDeliver && idemRef && idemMcpC7 && idemMcpGh && idemInst && idemSkill && idemHead && idemTime && idemTimeStep1 && idemHind && idemHindRefresh && idemMem && idemInjectedMcp && idemRc2
+const idemsAll = idemPlan && idemDeliver && idemRef && idemMcpC7 && idemMcpGh && idemInst && idemSkill && idemSkillIncomplete && idemSkillEmpty && idemSkillUpdateEmpty && idemHead && idemTime && idemTimeStep1 && idemHind && idemHindRefresh && idemMem && idemInjectedMcp && idemRc2
 const allOk = results.every((r) => r.ok) && idemsAll && linkResults.length === 0 && gateResults.every((r) => r.ok)
 console.log(`\n总判定: ${allOk ? 'ALL PASS' : 'HAS FAILURES'}`)
 process.exitCode = allOk ? 0 : 1

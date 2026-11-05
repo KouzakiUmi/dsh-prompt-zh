@@ -8,6 +8,15 @@
 
 暂无。
 
+## 1.3.7 — 2026-11-05
+
+- 适配 Core `0.2.2-rc.1`：`system-prompt/assemble` 的瀑布值不再携带 `tools`（工具声明由 tools provider 持有、宿主在瀑布之后追加），插件改为从 assemble 上下文的 `toolSet` 读取本步骤获准的工具名，用于段落可见性、句子裁剪与策略段生成；旧宿主仍回退读取瀑布值中的 `tools`，行为不变。
+- 已知边界（架构变化，非插件回归）：新宿主没有可用的工具声明改写入口，assemble 阶段无法再改写 bash description，因此 Git Bash 附加指导在 `0.2.2-rc.1` 上保持原文；旧宿主（含已登记的 Git Bash 0.39.0／0.39.4／0.42.2／0.43.2）继续翻译。`llm/stream` 的 options 为冻结对象，也不能用于改写。
+- 新增/修正译文：`tool:apply_patch`（0.2.2 新增段落）、`tool:schedule`（计划任务授权段落）；修正 `tool:structured_output` 的原文守卫（实际开头为 “When you have your final answer,”，此前守卫前缀不匹配）；补齐 `@deepseek-ai/dsh-tool-skill` 的技能发现不完整分支（目录替代句、未检查提示、空目录纪律）。
+- 版本声明：`engines.dsh`、`dsh.compatibility.dsh`、`dshReleases` 与五个核心组件版本元数据追加 `0.2.2-rc.1`；可选 peer `@deepseek-ai/schemastery` 放宽为 `>=3.18.5-alpha.1 <4` 以覆盖 0.2.2 现场的 3.19.0。
+- 验证：`npm test`、`npm run check`、`scripts/market-alignment-check.mjs` 通过；`tests/host-smoke.mjs /opt/dsh` 在 `@deepseek-ai/dsh@0.2.2-rc.1`（cordis 4.1.0、schemastery 3.19.0）上 ALL PASS，宿主 `evaluatePluginCompatibility` 判定清单 compatible。host-smoke 同步适配新契约（`toolSet` 桩、`sessionProjections.register` 句柄形态），并断言新宿主不再改写工具声明、旧宿主仍翻译。
+- 未在本轮做：`0.2.1-rc.5 → 0.2.2-rc.1` 的全包逐文件 SHA256 对照（仅核对了 system-prompt／time-context／agent-instructions／tool-skill／agent-loop 等提示词相关包的字符串与 section 注册差异）、设置页浏览器回归、生产 Profile 的真实配置保存验收，以及 Git Bash 0.44+／Hindsight 更高版本的逐条原文核验（未列版本仍保留原文）。
+
 ## 1.3.6 — 2026-10-31
 
 - 追加 `0.2.1-rc.4` 精确兼容声明：`engines.dsh`、`dsh.compatibility.dsh`、`dshReleases` 与五个核心组件版本元数据（`core`、`workspace`、`skills`、`time`、`context`）同步更新。

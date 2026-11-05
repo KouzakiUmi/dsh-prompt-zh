@@ -75,20 +75,38 @@ scopedPrompt.context({
 });
 scopedPrompt.section({ name: 'mcp:blender', order: 700, text: blenderEnglish });
 scopedPrompt.context({ name: 'gitbash-shell:posix-paths', order: 126, text: () => gitbashSamples[0].text });
+// 0.2.2-rc.1 新增/修正的段落：在真实组装管线中验证守卫命中后翻译。
+const APPLY_PATCH_SECTION = 'Prefer apply_patch over separate edit calls for changes across files or separated regions. Give every hunk enough surrounding context lines to match one place in the current file. The whole patch is checked first (syntax, hunk matching, missing files) and a rejected patch changes nothing; once applying starts, operations run in order, stop at the first failure, and are not rolled back, so re-read affected files before retrying when needed.';
+scopedPrompt.section({ name: 'tool:apply_patch', order: 305, text: APPLY_PATCH_SECTION });
+scopedPrompt.section({ name: 'tool:schedule', order: 306, text: "Only create or modify scheduled tasks at the user's explicit request; prior explicit user authorization for the running scheduled task remains valid." });
+scopedPrompt.section({ name: 'tool:structured_output', order: 307, text: 'When you have your final answer, you MUST report it by calling the `structured_output` tool with arguments matching its parameter schema exactly. Do not finish with a plain text answer: only the tool call counts as your result.' });
 const bashBase = 'Execute a bash command. Unknown schema prose remains English.';
 const bashParameters = { type: 'object', properties: { command: { type: 'string', description: 'The bash command to execute.', default: '/c/example' } } };
 scopedPrompt.tools(() => ({ schemas: [{ name: 'bash', description: bashBase, parameters: bashParameters }] }));
-// 按来源插件真实的 before-next 方式追加指导；检查内层／外层注册两种顺序。
+// 0.2.2-rc.1 起工具声明由 tools provider 持有：assemble 上下文的 toolSet 给出本步骤
+// 获准的工具，宿主在瀑布之后追加声明。旧宿主（≤0.2.1）则在瀑布值里携带 tools。
+// 两种契约都提供，按实际收到的形态断言不同行为。
+const stepToolSet = { view: () => new Map(['subagent', 'subagent_fork', 'bash', 'structured_output'].map((name) => [name, { name }])) };
+let assemblyCarriesTools = false;
+// 旧宿主：来源插件在 before-next 中把 Git Bash 附加指导追加到 bash description；
+// 新宿主：工具声明由 provider 生成，assemble 无法改写。
 const appendGuidance = (original, _context, next) => {
-  const bash = original.tools.find((tool) => tool.name === 'bash');
-  if (bash) bash.description += `\n${gitbashSamples[9].text}\n${gitbashSamples[10].text}\n${gitbashSamples[11].text}`;
+  if (Array.isArray(original.tools)) {
+    assemblyCarriesTools = true;
+    const bash = original.tools.find((tool) => tool.name === 'bash');
+    if (bash) bash.description += `\n${gitbashSamples[9].text}\n${gitbashSamples[10].text}\n${gitbashSamples[11].text}`;
+  }
   return next();
 };
 let disposeGuidance = ctx.on('system-prompt/assemble', appendGuidance);
-const assembly = await hostPrompt.assemble({ scope: a });
+const assembleForTest = () => hostPrompt.assemble({ scope: a, toolSet: stepToolSet });
+const assembly = await assembleForTest();
 assert.ok(assembly.sections.some((section) => section.name === 'harness:identity' && section.text.includes('你是由')));
 assert.ok(assembly.sections.some((section) => section.name === 'policy:delegation' && section.text.includes('subagent、subagent_fork')));
 assert.ok(!assembly.sections.some((section) => section.text.includes('Start independent')));
+assert.ok(assembly.sections.find((section) => section.name === 'tool:apply_patch').text.includes('跨文件或分散区域'));
+assert.ok(assembly.sections.find((section) => section.name === 'tool:schedule').text.includes('仅在用户明确要求时创建或修改计划任务'));
+assert.ok(assembly.sections.find((section) => section.name === 'tool:structured_output').text.includes('有最终答案时'));
 assert.equal(assembly.tools.find((tool) => tool.name === 'subagent').description, 'Schema descriptions intentionally stay English.');
 const sandboxOf = (value) => value.contexts.find((context) => context.name.endsWith('sandbox:policy'));
 assert.ok(sandboxOf(assembly).text.startsWith('当前 DSH 文件策略'));
@@ -118,14 +136,20 @@ const checkNewGuidance = (value) => {
   assert.ok(value.contexts.find((context) => context.name.endsWith('gitbash-shell:posix-paths')).text.startsWith('当前工作 shell'));
   const bash = value.tools.find((tool) => tool.name === 'bash');
   assert.ok(bash.description.startsWith(bashBase));
-  assert.ok(bash.description.includes('本机没有 PowerShell 工具'));
-  assert.ok(!bash.description.includes('Prefer this bash tool'));
+  if (assemblyCarriesTools) {
+    // 旧宿主：工具声明经过 assemble 瀑布，已知 Git Bash 附加指导翻译为中文。
+    assert.ok(bash.description.includes('本机没有 PowerShell 工具'));
+    assert.ok(!bash.description.includes('Prefer this bash tool'));
+  } else {
+    // 新宿主：工具声明由 provider 持有，assemble 不再接收 tools，附加指导保持原文（已知边界）。
+    assert.ok(!bash.description.includes('本机没有 PowerShell 工具'));
+  }
   assert.deepEqual(bash.parameters, bashParameters);
 };
 checkNewGuidance(assembly);
 disposeGuidance();
 disposeGuidance = ctx.on('system-prompt/assemble', appendGuidance, { prepend: true });
-checkNewGuidance(await hostPrompt.assemble({ scope: a }));
+checkNewGuidance(await assembleForTest());
 disposeGuidance();
 const refreshedGitbash = hostPrompt.refreshContext(assembly, { scope: a }).contexts.find((context) => context.name.endsWith('gitbash-shell:posix-paths'));
 assert.equal(refreshedGitbash.name, 'prompt-zh:gitbash-shell:posix-paths');
@@ -183,7 +207,10 @@ class TestProjections extends Service {
   constructor(owner) { super(owner, 'sessionProjections'); }
   register(definition) {
     this.definitions.set(definition.key, definition);
-    return this.ctx.effect(() => () => this.definitions.delete(definition.key));
+    this.ctx.effect(() => () => this.definitions.delete(definition.key));
+    // 0.2.2-rc.1 的 register 返回（或 await 后给出）带 stateOf(session) 的句柄；
+    // 旧宿主（≤0.2.1）改为在服务上按 key 查询。同一桩同时支持两种调用。
+    return { stateOf: () => this.definitions.get(definition.key).init() };
   }
   stateOf(_session, key) { return this.definitions.get(key).init(); }
 }

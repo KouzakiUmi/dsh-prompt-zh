@@ -56,6 +56,8 @@ Browser time zone for this request: unavailable. Ask the user to clarify otherwi
 
 1.3.4 修复运行时上下文快照被宿主刷新重建覆盖的问题，并放行已逐条核验的 Git Bash 0.43.2（保留 0.39.0／0.39.4／0.42.2 与 Core 0.2.1-rc.3 基线）、Hindsight 0.8.2；版本发布状态以 GitHub Release 与 npm registry 为准，安装后仍需在目标 Profile 验收。Git Bash、Hindsight 仅在当前解析包版本与条目已核验精确版本一致时翻译，未知或不符版本保留原文；已知 MCP server 独立按原文守卫执行。运行时上下文经 assemble 中文化后改挂插件自有条目，宿主 `refreshContext` 重建时仍保留中文；快照标题句与两条 required 上下文（工作目录、团队身份）仍由宿主生成英文。
 
+1.3.7 适配 Core `0.2.2-rc.1`：该版本起工具声明由 tools provider 持有，`system-prompt/assemble` 的水位值不再携带 `tools`，宿主在瀑布之后追加声明。插件改为从 assemble 上下文的 `toolSet` 读取本步骤获准的工具名用于段落裁剪与策略生成，旧宿主仍从瀑布值读取。代价是 Git Bash 附加指导不再能在 assemble 阶段改写 bash description（新宿主没有可用的工具声明改写入口，保持原文属于已知边界），新增的 `tool:apply_patch`、`tool:schedule` 段落与技能发现不完整分支已补译文。
+
 ## 逐条编辑译文
 
 在宿主的 **Prompt ZH 设置页**或插件配置区域中，每条内置译文都有区块、匹配方式、已核验／当前解析版本和处理计数。编辑框默认是内置译文，保存覆盖值后由实际翻译函数读取；不能编辑原文匹配规则。
@@ -106,8 +108,8 @@ dsh plugin --profile web add "<tarball 的绝对路径>"
 **不读取账户凭据，不改宿主安装包，不启动子进程，不向外部翻译服务发送提示词。** 翻译处理本身不写文件；保存操作复用宿主原生配置表单，由宿主写入当前 Profile。版本证据只读取公开解析得到的包 manifest 名称／版本；客户端仅以同源 GET 读取已认证的固定诊断路径，不进行外部网络翻译。
 
 - `systemPrompt` 是必需宿主服务；`agents` 动态接入，缺少时保留静态翻译与全局兜底。
-- Node.js 要求 `>=18`；DSH 范围仅列已核验的 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`，范围与逐版本声明保持一致。兼容声明不代表所有宿主、provider 和插件组合均完成现场验收。
-- 当前适配基线为官方 DeepSeek Harness 桌面安装包 `0.2.1-rc.5` 随包 Core `0.2.1-rc.5`；保留 rc.4（dsh-go 手机 App 本机引擎）、rc.3、alpha.3 fixture 与 rc.2 既有验证记录；没有在生产 Profile 安装或进行真实配置保存验收。
+- Node.js 要求 `>=18`；DSH 范围仅列已核验的 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`、`0.2.2-rc.1`，范围与逐版本声明保持一致。兼容声明不代表所有宿主、provider 和插件组合均完成现场验收。
+- 当前适配基线为 npm 安装的 `@deepseek-ai/dsh@0.2.2-rc.1`（cordis 4.1.0、schemastery 3.19.0）；保留 rc.5、rc.4（dsh-go 手机 App 本机引擎）、rc.3、alpha.3 fixture 与 rc.2 既有验证记录；没有在生产 Profile 安装或进行真实配置保存验收。
 
 ## 进一步了解
 
@@ -116,7 +118,7 @@ dsh plugin --profile web add "<tarball 的绝对路径>"
 | [兼容性与覆盖范围](docs/compatibility.md) | 能翻译什么、英文残留原因、已验证环境与权限边界 |
 | [开发与验证](docs/development.md) | 模块结构、离线测试、真实宿主验证、打包与发布流程 |
 | [本轮适配与加固报告](docs/audit-report.md) | 本轮改动、真实会话巡检结果、验证证据与待决事项 |
-| [更新记录](CHANGELOG.md) | 1.3.4 运行时快照修复与 Git Bash 0.43.2 放行、1.3.3 兼容 Core rc.3 与已核实的历史里程碑 |
+| [更新记录](CHANGELOG.md) | 1.3.7 适配 Core 0.2.2-rc.1（工具声明归属变化）、1.3.4 运行时快照修复与 Git Bash 0.43.2 放行、1.3.3 兼容 Core rc.3 与已核实的历史里程碑 |
 | [展示资源说明](assets/README.md) | 横幅的事实来源、字体引用与文档素材约定 |
 
 ---
