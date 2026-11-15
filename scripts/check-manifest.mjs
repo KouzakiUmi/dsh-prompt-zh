@@ -4,6 +4,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { satisfiesRange } from './compat-range.mjs';
 
 const PKG_NAME = "dsh-prompt-zh";
 const OWNER = "KouzakiUmi";
@@ -28,10 +29,27 @@ if (!dsh.bundle || !dsh.bundle.patch) fail('缺少 dsh.bundle.patch');
 else if (!existsSync(join(root, dsh.bundle.patch))) fail('dsh.bundle.patch 指向的文件不存在: ' + dsh.bundle.patch);
 else ok('dsh.bundle.patch -> ' + dsh.bundle.patch);
 
-const supported = Object.entries(dsh.compatibility?.dshReleases || {}).filter(([, state]) => state === 'compatible').map(([version]) => version).sort();
-if (!supported.length || pkg.engines?.dsh !== supported.join(' || ') || dsh.compatibility?.dsh !== pkg.engines?.dsh) {
-  fail('engines.dsh / compatibility.dsh 必须与已核验精确版本列表一致');
-} else ok('DSH 范围与精确版本兼容声明一致');
+// DSH 范围用 0.2.x 区间放行后续 alpha/rc，dshReleases 只记录已核验基线；
+// 两者不再逐字相同，但范围必须覆盖每个 compatible 版本，且不越过尚未验收的 0.3.0 线。
+const dshRange = pkg.engines?.dsh;
+const releaseStates = Object.entries(dsh.compatibility?.dshReleases || {});
+const supported = releaseStates.filter(([, state]) => state === 'compatible').map(([version]) => version).sort();
+const invalidState = releaseStates.filter(([, state]) => !['compatible', 'incompatible', 'unknown'].includes(state));
+if (typeof dshRange !== 'string' || dshRange.trim() === '') fail('engines.dsh 必须是非空范围');
+else if (dsh.compatibility?.dsh !== dshRange) fail('engines.dsh 与 dsh.compatibility.dsh 必须一致');
+else if (invalidState.length) fail('dshReleases 含非法状态: ' + invalidState.map(([v, s]) => `${v}=${s}`).join(', '));
+else if (!supported.length) fail('dshReleases 至少需要一个 compatible 版本');
+else {
+  try {
+    const outside = supported.filter((version) => !satisfiesRange(version, dshRange));
+    if (outside.length) fail(`DSH 范围未覆盖已核验版本: ${outside.join(', ')}`);
+    else if (satisfiesRange('0.3.0-0', dshRange) || satisfiesRange('0.3.0', dshRange)) {
+      fail('DSH 范围不能越过 0.3.0 线；0.3.0 尚未验收，需先更新范围与基线再发版');
+    } else ok(`DSH 范围 ${dshRange} 覆盖 ${supported.length} 个已核验版本，且止于 0.2.x`);
+  } catch (error) {
+    fail('DSH 范围无法解析: ' + error.message);
+  }
+}
 
 const peer = pkg.peerDependencies || {};
 const corePeers = Object.keys(peer).filter((k) => k.startsWith('@deepseek-ai/'));

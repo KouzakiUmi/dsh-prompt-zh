@@ -26,7 +26,7 @@
 
 ## 设置与第三方精确版本门控
 
-Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5` 与 `0.2.2-rc.1` 的 `settings`、`configForms` 和已认证 `connection.fetch` 契约；不沿用旧纯 Host 版本对早期 Core 的界面兼容声明。缺少相应服务或 Schema 时不能冒充可保存配置。兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。0.2.2-rc.1 起工具声明由 provider 持有，assemble 不再接收 `tools`，旧宿主的工具 description 附加翻译在新宿主不适用（见下文边界）。
+Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5` 与 `0.2.2-rc.1` 的 `settings`、`configForms` 和已认证 `connection.fetch` 契约；`0.2.2-rc.3` 以桌面安装包随包 Core 只读解包后的 host-smoke 作为宿主接口与既有规则回归证据，本轮未单独复核其 `configForms`／`connection.fetch` 实现，也未运行设置页浏览器回归。不沿用旧纯 Host 版本对早期 Core 的界面兼容声明。缺少相应服务或 Schema 时不能冒充可保存配置。兼容指宿主接口与既有规则回归通过，不表示新版新增的每条英文都有译文。0.2.2-rc.1 起工具声明由 provider 持有，assemble 不再接收 `tools`，旧宿主的工具 description 附加翻译在新宿主不适用（见下文边界）。
 
 每个内置译文条目使用同一运行时登记点，保存的覆盖值在真实 section、context、消息或附加说明替换函数中读取。带工具关联的自定义段落在关联工具缺失时临时回退内置值再裁剪，并记录回退次数；不改保存值，工具齐全后继续使用覆盖值。组件关闭后保留原文。第三方按精确版本放行：Git Bash 0.39.0／0.39.4／0.42.2／0.43.2 的提示分别登记适用版本（0.42.2 的路由与原生通道指导独立列出，0.43.2 逐条复核），Hindsight 包装基线为 0.8.1／0.8.2；未知版本不放行。MCP 已知 server 是例外：每条译文都带原文特征守卫，命中才替换，因此不依赖服务器版本；未知 server 仍按标题与正文保留原文处理。
 
@@ -40,12 +40,13 @@ Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc
 
 ## 为什么仍可能看到英文
 
-1. **运行时快照的标题与 required 条目**：核心 `dsh-agent-loop` 在 `pre-step` 后通过 `refreshContext` 重新调用 context provider，并替换 `runtime-context` 消息。本插件在 assemble 阶段中文化的运行时上下文会挂到自有条目名（`prompt-zh:*`）下，宿主重建时 `providers.get(name)` 为空，因此译文保留（`dsh-system-prompt` 只保留「仅由 assembly waterfall 新增」的条目）；文件策略、审批、Subagent 委派、实现目录、Web GUI URL 与 Git Bash POSIX 指导按此保留中文。仍为英文的部分：快照标题句（`Current runtime context…`，由 `joinContextSections` 拼接固定英文常量）与两条 `required: true` 的上下文（`working-directory:current`、`team:identity`）——它们不能改名，否则会被宿主按原名补回英文条目并重复出现。上述行为在 rc.3 解包宿主上经隔离实验与回归确认，未修改 Core 或来源插件。
-2. **注册发生得更晚**：创建完成后才挂载的外层 `prepend`（例如运行期间重组 preset），其返回内容仍可能晚于翻译处理。没有 Cordis `ctx` 的自定义 registry agent 也只能使用全局层，不保证覆盖其后追加的 preset 消息。
-3. **宿主之外的系统消息**：provider、网关或远端服务追加的文本可能不经过本插件的两个翻译管线。
-4. **刻意保留的工具契约**：参数 schema、工具调用名称、代码和动态值保持原状；通用 `description` 及未知附加内容不翻译。唯一新增的例外是 `bash` description 中已核实的 Git Bash 自然语言附加说明，使用安全浅拷贝翻译，不修改参数结构或其他工具。该例外只在旧宿主（≤ `0.2.1-rc.5`，瀑布值携带 `tools`）生效；`0.2.2-rc.1` 起工具声明由 provider 持有、assemble 不再接收 `tools`，宿主也不提供公开的声明改写入口，故 Git Bash 附加说明在该版本上保持原文。
-5. **未知内容**：不调用额外模型猜译未知 MCP、任意技能正文或上游变化后的规则。
-6. **工具返回值**：`skill` 等工具直接返回的全文不经过 `agent/pre-step` 注入翻译；有对应字符串译文，也不等于该工具结果被拦截。
+1. **运行时快照的标题与 required 条目**：核心 `dsh-agent-loop` 在 `pre-step` 后通过 `refreshContext` 重新调用 context provider，并替换 `runtime-context` 消息。本插件在 assemble 阶段中文化的运行时上下文会挂到自有条目名（`prompt-zh:*`）下，宿主重建时 `providers.get(name)` 为空，因此译文保留（`dsh-system-prompt` 只保留「仅由 assembly waterfall 新增」的条目）；文件策略、审批、Subagent 委派、实现目录、Web GUI URL 与 Git Bash POSIX 指导按此保留中文。快照的框架句由宿主生成，两种措辞都按原文守卫翻译：旧版 `joinContextSections` 的 `Current runtime context…`，以及 `0.2.2` 起 `dsh-agent-loop` 自行拼装消息时使用的 `The following information describes your current session…`（首次快照与后续替代两种）；措辞再次变化时保留英文。仍为英文的部分只有两条 `required: true` 的上下文（`working-directory:current`、`team:identity`）与宿主拼在其他位置的固定英文——它们不能改名，否则会被宿主按原名补回英文条目并重复出现。上述行为在 rc.3 解包宿主上经隔离实验与回归确认，未修改 Core 或来源插件。
+2. **聊天页「上下文注入」面板的条目名**：`0.2.2` 起聊天页会为注入消息渲染可展开的「上下文注入」行，面板内容取自消息的 `source`（`kind`／`form`／`sections`），其中 `sections` 直接显示每个运行时上下文条目的 **名字与文本**。插件为中文化而改名的条目会以原名加前缀的形式出现（例如 `prompt-zh:sandbox:policy`），文本是中文译文。这是面板如实展示模型收到的条目名，不是重复注入；宿主按名字判定快照是否变化的逻辑不受影响（改名稳定，前后一致）。面板的本地化标题、`form` 分类（`snapshot`／`instructions`／`catalog` 等）由宿主提供，插件不参与。
+3. **注册发生得更晚**：创建完成后才挂载的外层 `prepend`（例如运行期间重组 preset），其返回内容仍可能晚于翻译处理。没有 Cordis `ctx` 的自定义 registry agent 也只能使用全局层，不保证覆盖其后追加的 preset 消息。
+4. **宿主之外的系统消息**：provider、网关或远端服务追加的文本可能不经过本插件的两个翻译管线。
+5. **刻意保留的工具契约**：参数 schema、工具调用名称、代码和动态值保持原状；通用 `description` 及未知附加内容不翻译。唯一新增的例外是 `bash` description 中已核实的 Git Bash 自然语言附加说明，使用安全浅拷贝翻译，不修改参数结构或其他工具。该例外只在旧宿主（≤ `0.2.1-rc.5`，瀑布值携带 `tools`）生效；`0.2.2-rc.1` 起工具声明由 provider 持有、assemble 不再接收 `tools`，宿主也不提供公开的声明改写入口，故 Git Bash 附加说明在该版本上保持原文。
+6. **未知内容**：不调用额外模型猜译未知 MCP、任意技能正文或上游变化后的规则。
+7. **工具返回值**：`skill` 等工具直接返回的全文不经过 `agent/pre-step` 注入翻译；有对应字符串译文，也不等于该工具结果被拦截。
 
 不采用替换宿主方法、操作私有 hook 列表或改写冻结请求来绕过这些边界。`llm/stream` 的 `next()` 不接收替换消息参数，冻结的 options 也不能就地改写。
 
@@ -75,11 +76,13 @@ Host＋Client 接入已核验 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc
 
 **这些是具体包和桌面壳的版本，不是 DSH CLI 或 DSH 自带 npm 管理器版本。** 本轮不以 `dsh --version` 推断 Core，也未单独验证 CLI 发行版本。
 
-当前工作区清单明确列出 `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5` 和 `0.2.2-rc.1`，核心译文条目的已核验版本元数据与之同步。其他 Core 版本不自动获得兼容验收结论；核心译文仍按原文守卫尝试翻译，不将版本元数据误作严格阻断门。现场 Git Bash 为 0.43.2、Hindsight 为 0.8.2，两者均已列入精确放行清单（0.43.2 的 11 条原文已逐条比对实际安装副本）；MCP 已知 server 不依赖服务器版本，按原文守卫执行，未知 server 仍不翻译。以上不是全 provider 组合或所有新增英文文本的验收；发布状态以 GitHub Release 和 npm registry 为准。
+当前 `engines.dsh` 与 `dsh.compatibility.dsh` 使用 `>=0.2.1-alpha.2 <0.3.0-0` 范围放行整个 Core 0.2.x（含后续 alpha/rc）；`dshReleases` 记录已核验基线：`0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`、`0.2.2-rc.1` 和 `0.2.2-rc.3`，核心译文条目的版本元数据与之同步。范围放行不等于每个新增英文都有译文：核心译文仍按原文守卫尝试翻译，未命中保留原文；0.3.0 起不自动声明兼容，需重新核验后更新范围与基线。现场 Git Bash 为 0.43.2、Hindsight 为 0.8.2，两者独立按精确版本放行（0.43.2 的 11 条原文已逐条比对实际安装副本），未列版本保留原文；MCP 已知 server 不依赖服务器版本，按原文守卫执行，未知 server 仍不翻译。以上不是全 provider 组合或所有新增英文文本的验收；发布状态以 GitHub Release 和 npm registry 为准。
+
+2026-11-14 复核当前桌面安装包（`DSH NEXT` 壳 `2.0.23-next` 随包 Core `0.2.2-rc.3`，cordis `4.1.0`，schemastery `3.19.0`）：只读解析 ASAR 索引并解包到临时目录后运行 host-smoke，rc.3 宿主 ALL PASS（插件真实加载、assemble、时间注入、作用域监听、卸载／恢复与 `refreshContext` 边界）；宿主 `evaluatePluginCompatibility` 按 includePrerelease 语义判定新范围命中。与 npm 发布的 `0.2.2-rc.1` 对照 `dsh-system-prompt`、`dsh-time-context`、`dsh-agent-instructions`、`dsh-tool-skill`、`dsh-agent-loop`、`dsh-scope`、`dsh-app-boot`：`dsh-time-context`、`dsh-agent-instructions`、`dsh-scope` 的 JS 无差异；`dsh-system-prompt`（PTY 面板 section 等）、`dsh-tool-skill`（team/mode）、`dsh-agent-loop`（运行时上下文实现）与 `dsh-app-boot`（WSL 平台支持）存在差异。新增或变更的英文未逐条补译，按原文守卫未命中时保留英文。本轮未做全包逐文件 SHA256 对照、设置页浏览器回归和生产 Profile 保存验收。
 
 ## 插件库兼容与固定来源复核
 
-`engines.dsh`、`dsh.compatibility.dsh` 与逐版本 `dshReleases` 使用同一份已核验精确版本集合，避免市场把范围缺失误解为完全未声明兼容。发布前清单与设置回归会检查三者一致，不用宽泛范围冒充其他 Core 的验收。
+`engines.dsh` 与 `dsh.compatibility.dsh` 使用 0.2.x 范围，`dshReleases` 单独记录已核验基线，避免市场把范围缺失误解为完全未声明兼容。发布前清单与设置回归会检查范围覆盖每个 compatible 版本，并拒绝越过尚未验收的 0.3.0 线；范围放行不等于其他 Core 版本的新增英文已验收。
 
 DSH STORE 的固定源码策略还会识别文件与网络能力。本插件通过 Host 只读包 manifest 名称／版本，并由 Client 对已认证的固定同源诊断路径发 GET；配置保存使用宿主原生表单。这些是应如实审阅的功能，不为通过扫描而隐藏。商店目录更新、固定提交审阅与安装资格是独立步骤，GitHub／npm 发布成功不代表商店已恢复可安装；详见 [DSH STORE 规则](https://github.com/AI-Scarlett/DSH-Store/blob/main/registry/README.md)。
 

@@ -20,7 +20,7 @@
 
 工作区有 **239 条规则**，其中 MCP 94 条。匹配元数据为 pattern 162、literal 25、guarded-section 23、generated 19、prefix 6、derived 4；没有仅标记为 `section` 的条目。元数据标签不是守卫的执行证明，仍须检查实际分发与回归。
 
-`engines.dsh`、`dsh.compatibility.dsh` 和 `dshReleases` 使用同一份已核验精确版本集合。Core 文本以原文守卫决定是否翻译；第三方 Git Bash／Hindsight 独立按精确版本门控，不将 Core 升级当作第三方放行证据。
+`engines.dsh` 与 `dsh.compatibility.dsh` 使用 0.2.x 范围，`dshReleases` 单独记录已核验基线。Core 文本以原文守卫决定是否翻译；第三方 Git Bash／Hindsight 独立按精确版本门控，不将 Core 升级当作第三方放行证据。
 
 ## 2. 本次修复
 
@@ -86,7 +86,7 @@
 
 ## 6. 插件库兼容
 
-已核对 [DSH STORE 的固定源规则](https://github.com/AI-Scarlett/DSH-Store/blob/main/registry/README.md) 与 [Awesome DSH Plugins 贡献规则](https://github.com/white0dew/awesome-dsh-plugins/blob/main/CONTRIBUTING.md)。包名、仓库、MIT 许可证、Bundle 入口 `prompt-zh` 和原生 Host＋Client 形态保持不变；范围声明与精确版本声明同步。
+已核对 [DSH STORE 的固定源规则](https://github.com/AI-Scarlett/DSH-Store/blob/main/registry/README.md) 与 [Awesome DSH Plugins 贡献规则](https://github.com/white0dew/awesome-dsh-plugins/blob/main/CONTRIBUTING.md)。包名、仓库、MIT 许可证、Bundle 入口 `prompt-zh` 和原生 Host＋Client 形态保持不变；范围声明覆盖 0.2.x，精确版本基线单独记录。
 
 DSH STORE 在本次核对时仍登记旧版 1.3.1 和旧固定提交，状态为 blocked／external-only，原因包括兼容范围缺失，以及文件、网络能力需专项审阅。版本解析的只读文件访问、同源诊断 GET 和原生配置保存均如实披露，不为通过扫描而隐藏。
 

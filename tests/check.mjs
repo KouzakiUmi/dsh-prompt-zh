@@ -113,6 +113,17 @@ Before creating a pull request, search for pull request templates in the reposit
 
 const mcpC7Out = translate('mcp:context7', MCP_CONTEXT7_EN)
 check('mcp:context7', mcpC7Out, ['### MCP 服务器：context7', '获取最新文档', '请勿用于：重构代码'])
+
+// 上游 context7 服务器 2026-11 前后的新措辞（本会话系统提示词实测采样）。
+const MCP_CONTEXT7_NEW_EN = `### MCP server: context7
+
+Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
+
+Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.`
+
+const mcpC7NewOut = translate('mcp:context7', MCP_CONTEXT7_NEW_EN)
+check('mcp:context7 新措辞', mcpC7NewOut, ['### MCP 服务器：context7', '获取最新文档', '请勿用于：重构、调试或审查不依赖'])
+const idemMcpC7New = translate('mcp:context7', mcpC7NewOut) === mcpC7NewOut
 const mcpGhOut = translate('mcp:github', MCP_GITHUB_EN)
 check('mcp:github', mcpGhOut, ['### MCP 服务器：github', 'GitHub MCP 服务器提供与 GitHub 平台交互的工具', '工具选择指引：', 'Issue 处理', 'Pull Request 处理'])
 
@@ -140,6 +151,24 @@ A user may also invoke a skill directly; its <skill_content> block then appears 
 const INJECT_CONTEXT_HEAD_EN = `Current runtime context. This snapshot supersedes earlier runtime-context snapshots.
 
 当前 DSH 文件策略：danger-full-access。`
+
+// 0.2.2 起宿主在消息里自行拼装快照框架句：首次快照用冒号句，后续快照换成替代句，
+// 上下文清空时用 none 句。旧头句仍保留给 0.2.1 及更早宿主。
+const INJECT_CONTEXT_SNAPSHOT_FIRST_EN = `<system-reminder>
+The following information describes your current session:
+
+当前 DSH 文件策略：danger-full-access。
+</system-reminder>`
+
+const INJECT_CONTEXT_SNAPSHOT_REPLACE_EN = `<system-reminder>
+The following information describes your current session. It replaces earlier versions of this context, including any retained in conversation summaries.
+
+当前 DSH 文件策略：danger-full-access。
+</system-reminder>`
+
+const INJECT_CONTEXT_SNAPSHOT_CLEARED_EN = `<system-reminder>
+Current runtime context: none. Earlier runtime-context snapshots no longer apply.
+</system-reminder>`
 
 const INJECT_TIME_EN = `Time sampled while preparing turn 1, step 73: 2026-10-09T11:40:28+08:00[Asia/Hong_Kong]
 Browser time zone for this request: Asia/Hong_Kong. Interpret otherwise-unqualified dates and times in this zone.
@@ -218,6 +247,13 @@ check('injected:skills-update-empty', skillUpdateEmptyOut, ['技能发现过程�
 const headOut = translateInjectedText(INJECT_CONTEXT_HEAD_EN)
 check('injected:context-head', headOut, ['当前运行时上下文。此快照替代此前的运行时上下文快照。'])
 
+const snapshotFirstOut = translateInjectedText(INJECT_CONTEXT_SNAPSHOT_FIRST_EN)
+check('injected:context-snapshot-first', snapshotFirstOut, ['以下信息描述了你的当前会话：', '<system-reminder>'])
+const snapshotReplaceOut = translateInjectedText(INJECT_CONTEXT_SNAPSHOT_REPLACE_EN)
+check('injected:context-snapshot-replace', snapshotReplaceOut, ['以下信息描述了你的当前会话。它替代此上下文的先前版本，包括对话摘要中保留的版本。'])
+const snapshotClearedOut = translateInjectedText(INJECT_CONTEXT_SNAPSHOT_CLEARED_EN)
+check('injected:context-snapshot-cleared', snapshotClearedOut, ['当前运行时上下文：无。此前的运行时上下文快照不再适用。'])
+
 const timeOut = translateInjectedText(INJECT_TIME_EN)
 check('injected:time', timeOut, ['准备第 1 轮、第 73 步时采样的时间：', '本次请求的浏览器时区：Asia/Hong_Kong', '自上一步上下文以来已过去：10m 45s。'])
 
@@ -239,6 +275,9 @@ const idemSkillIncomplete = translateInjectedText(skillIncompleteOut) === skillI
 const idemSkillEmpty = translateInjectedText(skillEmptyOut) === skillEmptyOut
 const idemSkillUpdateEmpty = translateInjectedText(skillUpdateEmptyOut) === skillUpdateEmptyOut
 const idemHead = translateInjectedText(headOut) === headOut
+const idemSnapshotFirst = translateInjectedText(snapshotFirstOut) === snapshotFirstOut
+const idemSnapshotReplace = translateInjectedText(snapshotReplaceOut) === snapshotReplaceOut
+const idemSnapshotCleared = translateInjectedText(snapshotClearedOut) === snapshotClearedOut
 const idemTime = translateInjectedText(timeOut) === timeOut
 const idemTimeStep1 = translateInjectedText(timeStep1Out) === timeStep1Out
 const idemHind = translateInjectedText(hindOut) === hindOut
@@ -413,10 +452,14 @@ console.log(`  plan:policy                     ${idemPlan ? 'PASS' : 'FAIL'}`)
 console.log(`  ui:deliverable-file-references  ${idemDeliver ? 'PASS' : 'FAIL'}`)
 console.log(`  context:file-reference          ${idemRef ? 'PASS' : 'FAIL'}`)
 console.log(`  mcp:context7                    ${idemMcpC7 ? 'PASS' : 'FAIL'}`)
+console.log(`  mcp:context7 新措辞             ${idemMcpC7New ? 'PASS' : 'FAIL'}`)
 console.log(`  mcp:github                      ${idemMcpGh ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:instructions           ${idemInst ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:skills                 ${idemSkill ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:context-head           ${idemHead ? 'PASS' : 'FAIL'}`)
+console.log(`  injected:context-snapshot-first  ${idemSnapshotFirst ? 'PASS' : 'FAIL'}`)
+console.log(`  injected:context-snapshot-follow ${idemSnapshotReplace ? 'PASS' : 'FAIL'}`)
+console.log(`  injected:context-snapshot-clear  ${idemSnapshotCleared ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:time                   ${idemTime ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:time-step1             ${idemTimeStep1 ? 'PASS' : 'FAIL'}`)
 console.log(`  injected:hindsight-knowledge    ${idemHind ? 'PASS' : 'FAIL'}`)
@@ -564,7 +607,7 @@ gateCheck('运行时上下文: 未命中条目不改名不改写', localizedRunt
 console.log('\n=== 判断模块行为（句子↔工具关联）===')
 for (const r of gateResults) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.label}`)
 
-const idemsAll = idemPlan && idemDeliver && idemRef && idemMcpC7 && idemMcpGh && idemInst && idemSkill && idemSkillIncomplete && idemSkillEmpty && idemSkillUpdateEmpty && idemHead && idemTime && idemTimeStep1 && idemHind && idemHindRefresh && idemMem && idemInjectedMcp && idemRc2
+const idemsAll = idemPlan && idemDeliver && idemRef && idemMcpC7 && idemMcpGh && idemInst && idemSkill && idemSkillIncomplete && idemSkillEmpty && idemSkillUpdateEmpty && idemHead && idemSnapshotFirst && idemSnapshotReplace && idemSnapshotCleared && idemTime && idemTimeStep1 && idemHind && idemHindRefresh && idemMem && idemInjectedMcp && idemRc2
 const allOk = results.every((r) => r.ok) && idemsAll && linkResults.length === 0 && gateResults.every((r) => r.ok)
 console.log(`\n总判定: ${allOk ? 'ALL PASS' : 'HAS FAILURES'}`)
 process.exitCode = allOk ? 0 : 1

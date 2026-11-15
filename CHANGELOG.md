@@ -4,9 +4,13 @@
 
 发布状态以 GitHub Release 和 npm registry 为准；本文件与 main 的版本字段不自动证明该版本已发布。以下历史条目根据仓库提交与既有说明整理，不是逐版本重新验收。
 
-## 未发布
+## 1.3.8 — 2026-11-15
 
-暂无。
+- 兼容声明改为范围：`engines.dsh` 与 `dsh.compatibility.dsh` 从逐版本白名单改为 `>=0.2.1-alpha.2 <0.3.0-0`，后续 0.2.x 的 alpha/rc 不再因版本号不在清单而被宿主 `evaluatePluginCompatibility` 拦截；`dshReleases` 继续记录已核验基线并新增 `0.2.2-rc.3`，五个核心组件的版本元数据同步。发布前清单与设置回归改为校验范围覆盖每个 compatible 版本，并拒绝越过尚未验收的 0.3.0 线。
+- 以桌面安装包 `DSH NEXT`（壳 `2.0.23-next`）随包 Core `0.2.2-rc.3` 只读解包运行 `tests/host-smoke.mjs`，ALL PASS；宿主兼容判定命中新范围。与 npm `0.2.2-rc.1` 对照提示词相关包：`dsh-system-prompt`、`dsh-tool-skill`、`dsh-agent-loop` 存在差异，新增或变更的英文未逐条补译，原文守卫未命中时保留英文。本轮未做全包逐文件 SHA256 对照、设置页浏览器回归或生产 Profile 保存验收。
+- context7「Do not use for」段落新增 2026-11 措辞守卫：上游说明改为 `refactoring, debugging, or reviewing code that does not depend on a library or platform API`，旧正则静默失配导致尾段保持英文（守卫式设计的预期失效模式，不误译）。新增守卫规则并保留旧措辞规则以兼容旧版本服务器；新增对应测试夹具与幂等断言，离线回归 ALL PASS。
+- 补齐 Core `0.2.2` 运行时快照框架句译文：`dsh-agent-loop` 不再用 `joinContextSections` 的 `Current runtime context…` 头句，改为在自己拼装的消息里写 `The following information describes your current session:`（首次快照）或 `… It replaces earlier versions of this context, including any retained in conversation summaries.`（后续替代），上下文清空时写 `Current runtime context: none…`。三段各自按原文守卫翻译，旧头句规则保留给 ≤ `0.2.1` 宿主；新增夹具、幂等断言与措辞漂移保留原文的检查。
+- 核对 0.2.2 新增的聊天页「上下文注入」面板与插件的关系：面板内容取自消息 `source` 的 `kind`／`form`／`sections`，`sections` 直接显示每个运行时上下文条目的名字与文本。插件为中文化而把命中条目改名为 `prompt-zh:*`（宿主 `refreshContext` 才能保留译文），因此面板会显示前缀名 + 中文译文；面板自身不参与翻译，宿主按名字判定快照变化的逻辑不受影响，未观察到重复注入或内容丢失。该表现写进兼容性文档，不改变改名策略。
 
 ## 1.3.7 — 2026-11-05
 

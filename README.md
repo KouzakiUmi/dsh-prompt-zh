@@ -28,7 +28,7 @@ DeepSeek Harness 的系统提示词中文化插件。把已知英文规则译成
 | --- | --- |
 | 系统行为指引 | 中文化已知提示词段落，按当前可见工具裁剪相关句子 |
 | MCP 使用规则 | Blender、Context7、GitHub、Playwright、Chrome DevTools 按已知原文守卫翻译，不依赖服务器版本；未知服务器保持原文，不用 MCP 客户端版本冒充 |
-| 运行时提醒 | 处理时间／时区、工作区指令包装、技能目录调用纪律、Hindsight 记忆规则等已知文本；运行时快照中的文件策略、审批、Subagent 委派、实现目录与 Web GUI URL 在宿主刷新重建后仍保留中文（快照标题句与工作目录／团队身份两条 required 上下文仍由宿主生成英文） |
+| 运行时提醒 | 处理时间／时区、工作区指令包装、技能目录调用纪律、Hindsight 记忆规则等已知文本；运行时快照的框架句（旧版 `Current runtime context…` 与 0.2.2 起的 `The following information describes your current session…` 两种措辞）、文件策略、审批、Subagent 委派、实现目录与 Web GUI URL 在宿主刷新重建后仍保留中文；工作目录／团队身份两条 required 上下文仍由宿主生成英文。聊天页「上下文注入」面板会把中文化条目显示为 `prompt-zh:*` 前缀名（文本为中文），属于面板如实展示，不影响模型请求 |
 | Git Bash 附加指导 | 中文化已知 MSYS 路径、shell 路由及 `run_code` 开启／关闭提示；只替换匹配的 Bash description 附加文本 |
 | 工具调用契约 | 保留工具名、参数 schema、代码和动态值；通用 description 及未知附加内容保持原文 |
 
@@ -108,8 +108,8 @@ dsh plugin --profile web add "<tarball 的绝对路径>"
 **不读取账户凭据，不改宿主安装包，不启动子进程，不向外部翻译服务发送提示词。** 翻译处理本身不写文件；保存操作复用宿主原生配置表单，由宿主写入当前 Profile。版本证据只读取公开解析得到的包 manifest 名称／版本；客户端仅以同源 GET 读取已认证的固定诊断路径，不进行外部网络翻译。
 
 - `systemPrompt` 是必需宿主服务；`agents` 动态接入，缺少时保留静态翻译与全局兜底。
-- Node.js 要求 `>=18`；DSH 范围仅列已核验的 Core `0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`、`0.2.2-rc.1`，范围与逐版本声明保持一致。兼容声明不代表所有宿主、provider 和插件组合均完成现场验收。
-- 当前适配基线为 npm 安装的 `@deepseek-ai/dsh@0.2.2-rc.1`（cordis 4.1.0、schemastery 3.19.0）；保留 rc.5、rc.4（dsh-go 手机 App 本机引擎）、rc.3、alpha.3 fixture 与 rc.2 既有验证记录；没有在生产 Profile 安装或进行真实配置保存验收。
+- Node.js 要求 `>=18`；DSH 使用 `>=0.2.1-alpha.2 <0.3.0-0` 范围放行整个 Core 0.2.x（含后续 alpha/rc），已核验基线记录在 `dshReleases`（最新 `0.2.2-rc.3`）。范围放行表示宿主可加载且既有接口与规则回归通过，不代表新版新增的每条英文都有译文；0.3.0 起不自动声明兼容。兼容声明不代表所有宿主、provider 和插件组合均完成现场验收。
+- 当前适配基线为桌面安装包随包 `@deepseek-ai/dsh@0.2.2-rc.3`（壳 `2.0.23-next`，cordis 4.1.0、schemastery 3.19.0）；只读解包后运行 host-smoke 为 ALL PASS。保留 rc.1、rc.5、rc.4（dsh-go 手机 App 本机引擎）、alpha.3 fixture 与 rc.2 既有验证记录；没有在生产 Profile 安装或进行真实配置保存验收。
 
 ## 进一步了解
 
@@ -118,7 +118,7 @@ dsh plugin --profile web add "<tarball 的绝对路径>"
 | [兼容性与覆盖范围](docs/compatibility.md) | 能翻译什么、英文残留原因、已验证环境与权限边界 |
 | [开发与验证](docs/development.md) | 模块结构、离线测试、真实宿主验证、打包与发布流程 |
 | [本轮适配与加固报告](docs/audit-report.md) | 本轮改动、真实会话巡检结果、验证证据与待决事项 |
-| [更新记录](CHANGELOG.md) | 1.3.7 适配 Core 0.2.2-rc.1（工具声明归属变化）、1.3.4 运行时快照修复与 Git Bash 0.43.2 放行、1.3.3 兼容 Core rc.3 与已核实的历史里程碑 |
+| [更新记录](CHANGELOG.md) | 1.3.8 兼容范围与 0.2.2 快照框架句、1.3.7 适配 Core 0.2.2-rc.1（工具声明归属变化）、1.3.4 运行时快照修复与 Git Bash 0.43.2 放行、1.3.3 兼容 Core rc.3 与已核实的历史里程碑 |
 | [展示资源说明](assets/README.md) | 横幅的事实来源、字体引用与文档素材约定 |
 
 ---

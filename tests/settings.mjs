@@ -6,6 +6,7 @@ import { apply, getRules, translate, translateContext, translateMessages, transl
 import { TranslationRuntime, COMPONENTS, normalizePreferences } from '../lib/rules.js';
 import { createConfigSchema, versionResolver, installSettingsHost } from '../lib/settings-host.js';
 import { gitbashSamples } from './new-guidance.mjs';
+import { satisfiesRange } from '../scripts/compat-range.mjs';
 
 export function loadClient(React = {}, environment = {}) {
   let plugin;
@@ -27,11 +28,16 @@ export async function settingsChecks() {
     for (const component of COMPONENTS) assert.ok(rows.some((row) => row.component === component.id), component.id);
     assert.ok(rows.every((row) => typeof row.defaultText === 'string' && row.defaultText.length > 0));
   });
-  check('settings: Core 兼容清单与各核心译文版本元数据保持一致', () => {
+  check('settings: Core 兼容范围覆盖已核验基线，组件版本元数据与基线一致', () => {
     const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
     const compatible = Object.entries(manifest.dsh.compatibility.dshReleases).filter(([, state]) => state === 'compatible').map(([version]) => version).sort();
-    assert.deepEqual(manifest.engines.dsh.split(' || ').sort(), compatible, 'DSH STORE 范围与精确验收声明必须一致');
-    assert.equal(manifest.dsh.compatibility.dsh, manifest.engines.dsh);
+    const range = manifest.engines.dsh;
+    assert.ok(range && range.trim(), 'DSH 兼容范围不能为空');
+    assert.equal(manifest.dsh.compatibility.dsh, range);
+    for (const version of compatible) assert.ok(satisfiesRange(version, range), `${version} 不在 DSH 兼容范围 ${range}`);
+    assert.ok(satisfiesRange('0.2.3-rc.1', range), '0.2.x 后续预发布应自动放行，不再需要逐版修改声明');
+    assert.ok(!satisfiesRange('0.3.0-rc.1', range), '0.3.0 线（含预发布）不能自动放行');
+    assert.ok(!satisfiesRange('0.3.0-0', range), 'DSH 兼容范围不能越过 0.3.0 线');
     for (const component of COMPONENTS.filter((item) => !item.thirdParty)) {
       assert.deepEqual([...component.versions].sort(), compatible, component.id);
       for (const row of rows.filter((item) => item.component === component.id)) assert.deepEqual([...row.versions].sort(), compatible, row.id);
